@@ -1,43 +1,46 @@
 import { Canvas } from "@react-three/fiber"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js"
-import { ParametersMap, ParametricSurfaceFn, Preset, presets, translateFunction } from "./utils/functions"
+import { ParametersMap, ParametricSurfaceFn, Preset, presetList, presets, translateFunction } from "./utils/functions"
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
-import { findGeodesic, solveGeodesic } from "./utils/math"
+import { solveGeodesic } from "./utils/math"
+import { capitalize } from "./utils/capitalize"
 
-const curvePoints = 50
 function ThreeScene({
     startU,
     startV,
-    endU,
-    endV,
+    uVel,
+    vVel,
     parametricSurface,
     minU,
     maxU,
     minV,
     maxV,
+    step,
+    nSteps,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
     startV: number
-    endU: number
-    endV: number
+    uVel: number
+    vVel: number
     minU: number
     maxU: number
     minV: number
     maxV: number
+    step: number
+    nSteps: number
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
-    const endPos = useMemo(() => parametricSurface(endU, endV), [endU, endV, parametricSurface])
 
     const lineRef = useRef<BufferGeometry>(null)
     useEffect(() => {
         lineRef.current!.setFromPoints(
-            findGeodesic(parametricSurface, startU, startV, endU, endV, 0.1, 50, 0.25).map(([u, v]) => parametricSurface(u, v))
+            solveGeodesic(parametricSurface, startU, startV, uVel, vVel, step, nSteps).map(([u, v]) => parametricSurface(u, v))
         )
-    }, [startU, startV, endU, endV, parametricSurface])
+    }, [startU, startV, uVel, vVel, parametricSurface])
 
     return (
         <>
@@ -58,9 +61,6 @@ function ThreeScene({
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
                 <meshStandardMaterial color="green" />
-            </Sphere>
-            <Sphere args={[0.2, 20, 20]} position={endPos}>
-                <meshStandardMaterial color="red" />
             </Sphere>
 
             <line>
@@ -108,8 +108,11 @@ export default function App() {
     const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
     const [startV, startVNumber, setStartV] = useStringNumber(0)
 
-    const [endU, endUNumber, setEndU] = useStringNumber(Math.PI / 2)
-    const [endV, endVNumber, setEndV] = useStringNumber(-3 * Math.PI / 4)
+    const [uVel, uVelNumber, setUVel] = useStringNumber(1)
+    const [vVel, vVelNumber, setVVel] = useStringNumber(1)
+
+    const [step, stepNumber, setStep] = useStringNumber(0.05)
+    const [nSteps, nStepsNumber, setNSteps] = useStringNumber(50)
 
     return (
         <>
@@ -123,15 +126,20 @@ export default function App() {
                 <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
 
+                <p>Path</p>
                 <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">end u: <input value={endU} onChange={e => setEndU(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">end v: <input value={endV} onChange={e => setEndV(e.target.value)} type="text" /></label>
+                <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
+                <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
+
+                <p>Numerical Parameters</p>
+                <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
+                <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
 
                 <p>Presets</p>
-
-                <button onClick={() => usePreset("sphere")}>Sphere</button>
-                <button onClick={() => usePreset("cylinder")}>Cylinder</button>
+                {presetList.map((preset, i) => 
+                    <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
+                )}
             </div>
 
             <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
@@ -139,12 +147,14 @@ export default function App() {
                     parametricSurface={parametricSurface}
                     startU={startUNumber}
                     startV={startVNumber}
-                    endU={endUNumber}
-                    endV={endVNumber}
+                    uVel={uVelNumber}
+                    vVel={vVelNumber}
                     minU={minUNumber}
                     maxU={maxUNumber}
                     minV={minVNumber}
                     maxV={maxVNumber}
+                    step={stepNumber}
+                    nSteps={nStepsNumber}
                 />
                 <OrbitControls/>
             </Canvas>

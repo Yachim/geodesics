@@ -23,7 +23,7 @@ export function translateFunction(
     return (u, v) => eval(result)
 }
 
-export const presetList = ["sphere", "cylinder"] as const
+export const presetList = ["sphere", "cylinder", "torus"] as const
 export type Preset = typeof presetList[number]
 export const presets: {
     [key in Preset]: {
@@ -50,5 +50,13 @@ export const presets: {
         uRange: [-10, 10],
         vRange: [0, 2 * Math.PI],
         parameters: new Map([["r", 5]]),
+    },
+    torus: {
+        x: "(%R + %r * cos(%u)) * cos(%v)",
+        y: "%r * sin(%u)",
+        z: "(%R + %r * cos(%u)) * sin(%v)",
+        uRange: [0, 2 * Math.PI],
+        vRange: [0, 2 * Math.PI],
+        parameters: new Map([["R", 5], ["r", 1]]),
     },
 }
