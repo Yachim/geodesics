@@ -6,4 +6,12 @@
     html, body, #root {
         @apply w-full h-full;
     }
+
+    :root {
+        @apply text-text bg-bg;
+    }
+
+    input, button, select {
+        @apply border-text border-2;
+    }
 }
