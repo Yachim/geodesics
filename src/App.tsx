@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js"
-import { ParametersMap, ParametricSurfaceFn, Preset, presetList, presets, translateFunction } from "./utils/functions"
+import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList, presets, translateFunction } from "./utils/functions"
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
@@ -40,7 +40,7 @@ function ThreeScene({
         lineRef.current!.setFromPoints(
             solveGeodesic(parametricSurface, startU, startV, uVel, vVel, step, nSteps).map(([u, v]) => parametricSurface(u, v))
         )
-    }, [startU, startV, uVel, vVel, parametricSurface])
+    }, [startU, startV, uVel, vVel, parametricSurface, step, nSteps])
 
     return (
         <>
@@ -77,11 +77,29 @@ export default function App() {
     const [minV, minVNumber, setMinV] = useStringNumber(0)
     const [maxV, maxVNumber, setMaxV] = useStringNumber(1)
 
-    const [parameters, setParameters] = useState<ParametersMap>(new Map())
+    const [parameters, setParameters] = useState<ParametersObj>({})
 
     const [xFn, setXFn] = useState("")
     const [yFn, setYFn] = useState("")
     const [zFn, setZFn] = useState("")
+
+    const parametersList = useMemo(() => [...new Set(
+        ...findParameters(xFn),
+        ...findParameters(yFn),
+        ...findParameters(zFn),
+    )], [xFn, yFn, zFn])
+
+    useEffect(() => {
+        const parameters: ParametersObj = {}
+        parametersList.forEach((k) => {
+            parameters[k] = 0            
+        })
+
+        setParameters(prev => ({
+            ...parameters,
+            ...prev,
+        }))
+    }, [parametersList])
 
     const usePreset = useCallback((preset: Preset) => {
         const presetObj = presets[preset]
@@ -103,7 +121,7 @@ export default function App() {
         translateFunction(xFn, parameters)(u, v),
         translateFunction(yFn, parameters)(u, v),
         translateFunction(zFn, parameters)(u, v),
-    ), [xFn, yFn, zFn])
+    ), [xFn, yFn, zFn, parameters])
 
     const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
     const [startV, startVNumber, setStartV] = useStringNumber(0)
@@ -126,17 +144,26 @@ export default function App() {
                 <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
 
-                <p>Path</p>
+                {Object.entries(parameters).map(([k, v], i) => 
+                    <label key={`param-${i}`} className="flex items-center gap-2">
+                        {k}: <input value={v} onChange={e => setParameters(prev => ({
+                            ...prev,
+                            [k]: +e.target.value,
+                        }))} type="text" />
+                    </label>
+                )}
+
+                <p className="underline">Path</p>
                 <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
 
-                <p>Numerical Parameters</p>
+                <p className="underline">Numerical Parameters</p>
                 <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
 
-                <p>Presets</p>
+                <p className="underline">Presets</p>
                 {presetList.map((preset, i) => 
                     <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
                 )}
