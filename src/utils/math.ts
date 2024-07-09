@@ -149,13 +149,14 @@ function christoffelSymbolsSecondKind(surface: ParametricSurfaceFn, u: number, v
 }
 
 // the velocity always gets normalized
-export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number, nSteps: number): [number, number][] {
+export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number, nSteps: number, maxLength: number): [number, number][] {
     const points: [number, number][] = [[u, v]]
     let prevU = u
     let prevV = v
     let velNorm = norm(surface, u, v, uVel, vVel)
     let prevUVel = uVel / velNorm
     let prevVVel = vVel / velNorm
+    let length = 0
     for (let i = 0; i < nSteps; i++) {
         const css = christoffelSymbolsSecondKind(surface, prevU, prevV)
         const newUVel = prevUVel - (css[0][0][0] * (prevUVel ** 2) + 2 * css[0][0][1] * prevUVel * prevVVel + css[0][1][1] * (prevVVel ** 2)) * dt
@@ -163,7 +164,12 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
         const newU = prevU + prevUVel * dt
         const newV = prevV + prevVVel * dt
 
+        length += norm(surface, prevU, prevV, newU - prevU, newV - prevV)
         points.push([newU, newV])
+
+        if (length >= maxLength && maxLength !== 0) {
+            break
+        }
 
         prevU = newU
         prevV = newV

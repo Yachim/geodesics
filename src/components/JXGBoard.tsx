@@ -1,7 +1,5 @@
 import JXG from "jsxgraph";
-import { useEffect } from "react";
-
-JXG.Options.text.useMathJax = true
+import { forwardRef, Ref, useEffect } from "react";
 
 export type BoardProps = {
     bbox?: [number, number, number, number]
@@ -11,7 +9,7 @@ export type BoardProps = {
     className?: string
 }
 
-export function CustomJXGBoard({
+export const CustomJXGBoard = forwardRef(({
     id,
     bbox,
     axis,
@@ -20,7 +18,7 @@ export function CustomJXGBoard({
 }: BoardProps & {
     id: string
     initFn?: (board: JXG.Board) => void
-}) {
+}, ref: Ref<HTMLDivElement>) => {
     useEffect(() => {
         const board = JXG.JSXGraph.initBoard(id, {
             renderer: "canvas",
@@ -38,6 +36,6 @@ export function CustomJXGBoard({
     }, [bbox, initFn, axis, id])
 
     return (
-        <div className={`w-full aspect-video ${className}`} id={id} />
+        <div ref={ref} className={`w-full aspect-video ${className}`} id={id} />
     )
-}
+})

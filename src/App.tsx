@@ -168,20 +168,28 @@ export default function App() {
     }, [])
     useEffect(() => usePreset("sphere"), [])
 
-    const parametricSurface = useCallback<ParametricSurfaceFn>((u, v) => new Vector3(
-        runFunction(xFn, parameters, u, v),
-        runFunction(yFn, parameters, u, v),
-        runFunction(zFn, parameters, u, v),
-    ), [xFn, yFn, zFn, parameters])
+    const parametricSurface = useCallback<ParametricSurfaceFn>((u, v) => {
+        try {
+            return new Vector3(
+                runFunction(xFn, parameters, u, v),
+                runFunction(yFn, parameters, u, v),
+                runFunction(zFn, parameters, u, v),
+            )
+        }
+        catch {
+            return new Vector3(NaN, NaN, NaN)
+        }
+    }, [xFn, yFn, zFn, parameters])
 
     const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
     const [startV, startVNumber, setStartV] = useStringNumber(0)
 
-    const [uVel, uVelNumber, setUVel] = useStringNumber(1)
+    const [uVel, uVelNumber, setUVel] = useStringNumber(0)
     const [vVel, vVelNumber, setVVel] = useStringNumber(1)
 
-    const [step, stepNumber, setStep] = useStringNumber(0.05)
-    const [nSteps, nStepsNumber, setNSteps] = useStringNumber(50)
+    const [step, stepNumber, setStep] = useStringNumber(0.01)
+    const [nSteps, nStepsNumber, setNSteps] = useStringNumber(5000)
+    const [maxLength, maxLengthNumber, setMaxLength] = useStringNumber(32, 0)
 
     const [surfaceColor, setSurfaceColor] = useState("#aaaaaa")
     const [surfaceOpacity, surfaceOpacityNumber, setSurfaceOpacity] = useStringNumber(1)
@@ -198,105 +206,137 @@ export default function App() {
     const [directionColor, setDirectionColor] = useState("#ff0000")
     const [directionLength, directionLengthNumber, setDirectionLength] = useStringNumber(2)
 
-    const curvePoints = useMemo(() => solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber), [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
+    const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
+    const getCurvePoints = useCallback(() =>
+        setCurvePoints(solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLengthNumber)),
+    [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
     
     const [view, setView] = useState<"intrinsic" | "extrinsic">("extrinsic")
+    const bbox: [number, number, number, number] = useMemo(() => {
+        const width = maxUNumber - minUNumber
+        const height = maxVNumber - minVNumber
+        let centerX = minUNumber + width / 2
+        let centerY = minVNumber + height / 2
+
+        const size = Math.max(width, height)
+
+        const marginSize = size * 0.05
+
+        return [
+            centerX - size / 2 - marginSize,
+            centerY + size / 2 + marginSize,
+            centerX + size / 2 + marginSize,
+            centerY - size / 2 - marginSize,
+        ]
+    }, [maxUNumber, minUNumber, maxVNumber, minVNumber, view])
 
     return (
         <>
             <button className="absolute left-2 top-2 px-2 z-10" onClick={() => setView(prev => prev === "intrinsic" ? "extrinsic" : "intrinsic")}>Switch to {view === "intrinsic" ? "extrinsic" : "intrinsic"} view</button>
-            <div className="absolute right-0 top-0 p-4 flex flex-col gap-2 z-10 h-full overflow-y-auto">
-                <label className="flex items-center gap-2">x(u, v) = <input value={xFn} onChange={e => setXFn(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">y(u, v) = <input value={yFn} onChange={e => setYFn(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">z(u, v) = <input value={zFn} onChange={e => setZFn(e.target.value)} type="text" /></label>
+            <div className="flex w-full h-full">
+                {view === "extrinsic" ? <Canvas camera={{position: [0, 10, 10]}}>
+                    <ThreeScene
+                        parametricSurface={parametricSurface}
+                        startU={startUNumber}
+                        startV={startVNumber}
+                        uVel={uVelNumber}
+                        vVel={vVelNumber}
+                        minU={minUNumber}
+                        maxU={maxUNumber}
+                        minV={minVNumber}
+                        maxV={maxVNumber}
+                        surfaceColor={surfaceColor}
+                        surfaceOpacity={surfaceOpacityNumber}
+                        planeColor={planeColor}
+                        planeOpacity={planeOpacityNumber}
+                        pointColor={pointColor}
+                        pointOpacity={pointOpacityNumber}
+                        pathColor={pathColor}
+                        pathOpacity={pathOpacityNumber}
+                        directionColor={directionColor}
+                        directionLength={directionLengthNumber}
+                        curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
+                    />
+                    <OrbitControls/>
+                </Canvas> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
+                    // naive
+                    const velNorm = Math.sqrt(uVelNumber ** 2 + vVelNumber ** 2)
 
-                <label className="flex items-center gap-2">u minimum: <input value={minU} onChange={e => setMinU(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
+                    const point = board.create("point", [startUNumber, startVNumber], {
+                        name: "",
+                        color: pointColor,
+                    })
+                    board.create("arrow", [point, [startUNumber + uVelNumber / velNorm * directionLengthNumber, startVNumber + vVelNumber / velNorm * directionLengthNumber]], {
+                        color: directionColor,
+                    })
 
-                {Object.entries(parameters).map(([k, v], i) => 
-                    <label key={`param-${i}`} className="flex items-center gap-2">
-                        {k}: <input value={v} onChange={e => setParameters(prev => ({
-                            ...prev,
-                            [k]: +e.target.value,
-                        }))} type="text" />
-                    </label>
-                )}
+                    board.create("curve", [curvePoints.map(([u]) => u), curvePoints.map(([_, v]) => v)], {
+                        strokeColor: pathColor,
+                    })
+                }}/>}
 
-                <p className="underline">Path</p>
-                <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
+                <div className="flex flex-col bg-gray-300 border-2 border-text z-10 overflow-y-auto max-h-full overflow-x-hidden flex-shrink-0">
+                    <p className="p-1 font-bold text-center">Surface</p>
+                    <div className="flex flex-col gap-2 p-2">
+                        <label className="flex items-center gap-2">x(u, v) = <input value={xFn} onChange={e => setXFn(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">y(u, v) = <input value={yFn} onChange={e => setYFn(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">z(u, v) = <input value={zFn} onChange={e => setZFn(e.target.value)} type="text" /></label>
 
-                <p className="underline">Geodesic Parameters</p>
-                <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
-                <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
-                {/* TODO: max arc length */}
+                        {Object.entries(parameters).map(([k, v], i) => 
+                            <label key={`param-${i}`} className="flex items-center gap-2">
+                                {k}: <input value={v} onChange={e => setParameters(prev => ({
+                                    ...prev,
+                                    [k]: +e.target.value,
+                                }))} type="text" />
+                            </label>
+                        )}
 
-                <p className="underline">Presets</p>
-                {presetList.map((preset, i) => 
-                    <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
-                )}
+                        <label className="flex items-center gap-2">u minimum: <input value={minU} onChange={e => setMinU(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
+                    </div>
 
-                <p className="underline">Cosmetic</p>
-                <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
-                <label className="flex items-center gap-2">surface opacity: <input value={surfaceOpacity} onChange={e => setSurfaceOpacity(e.target.value)} type="number" /></label>
+                    <p className="p-1 font-bold text-center">Path</p>
+                    <div className="flex flex-col gap-2 p-2">
+                        <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
 
-                <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>
-                <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
+                        <p className="p-1 font-bold text-center">Integration Parameters</p>
+                        <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">max length: <input value={maxLength} onChange={e => setMaxLength(e.target.value)} type="text" /></label>
+                        <button onClick={getCurvePoints}>Solve Geodesic</button>
+                    </div>
 
-                <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
-                <label className="flex items-center gap-2">point opacity: <input value={pointOpacity} onChange={e => setPointOpacity(e.target.value)} type="number" /></label>
+                    <p className="p-1 font-bold text-center">Presets</p>
+                    <div className="gap-2 grid grid-cols-2 p-2">
+                        {presetList.map((preset, i) => 
+                            <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
+                        )}
+                    </div>
 
-                <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
-                <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
+                    <p className="p-1 font-bold text-center">Cosmetic</p>
+                    <div className="flex flex-col gap-2 p-2">
+                        <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">surface opacity: <input value={surfaceOpacity} onChange={e => setSurfaceOpacity(e.target.value)} type="number" /></label>
 
-                <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
-                <label className="flex items-center gap-2">direction length: <input value={directionLength} onChange={e => setDirectionLength(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
+
+                        <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">point opacity: <input value={pointOpacity} onChange={e => setPointOpacity(e.target.value)} type="number" /></label>
+
+                        <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
+
+                        <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">direction length: <input value={directionLength} onChange={e => setDirectionLength(e.target.value)} type="number" /></label>
+                    </div>
+                </div>
             </div>
-
-            {view === "extrinsic" ? <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
-                <ThreeScene
-                    parametricSurface={parametricSurface}
-                    startU={startUNumber}
-                    startV={startVNumber}
-                    uVel={uVelNumber}
-                    vVel={vVelNumber}
-                    minU={minUNumber}
-                    maxU={maxUNumber}
-                    minV={minVNumber}
-                    maxV={maxVNumber}
-                    surfaceColor={surfaceColor}
-                    surfaceOpacity={surfaceOpacityNumber}
-                    planeColor={planeColor}
-                    planeOpacity={planeOpacityNumber}
-                    pointColor={pointColor}
-                    pointOpacity={pointOpacityNumber}
-                    pathColor={pathColor}
-                    pathOpacity={pathOpacityNumber}
-                    directionColor={directionColor}
-                    directionLength={directionLengthNumber}
-                    curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
-                />
-                <OrbitControls/>
-            </Canvas> : <CustomJXGBoard id="intrinsic-view" bbox={[minUNumber, maxVNumber, maxUNumber, minVNumber]} initFn={board => {
-                // naive
-                const velNorm = Math.sqrt(uVelNumber ** 2 + vVelNumber ** 2)
-
-                const point = board.create("point", [startUNumber, startVNumber], {
-                    name: "",
-                    color: pointColor,
-                })
-                board.create("arrow", [point, [startUNumber + uVelNumber / velNorm * directionLengthNumber, startVNumber + vVelNumber / velNorm * directionLengthNumber]], {
-                    color: directionColor,
-                })
-
-                board.create("curve", [curvePoints.map(([u]) => u), curvePoints.map(([_, v]) => v)], {
-                    strokeColor: pathColor,
-                })
-            }}/>}
         </>
     )
 }
