@@ -5,7 +5,7 @@ import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList,
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
-import { solveGeodesic } from "./utils/math"
+import { solveGeodesic, uBase, vBase } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { animated, config, useSpring } from "@react-spring/three"
 
@@ -19,8 +19,6 @@ function ThreeScene({
     maxU,
     minV,
     maxV,
-    step,
-    nSteps,
     surfaceColor,
     surfaceOpacity,
     planeColor,
@@ -29,6 +27,8 @@ function ThreeScene({
     pointOpacity,
     pathColor,
     pathOpacity,
+    directionColor,
+    curvePoints,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -39,8 +39,6 @@ function ThreeScene({
     maxU: number
     minV: number
     maxV: number
-    step: number
-    nSteps: number
     surfaceColor: string
     surfaceOpacity: number
     planeColor: string
@@ -49,15 +47,26 @@ function ThreeScene({
     pointOpacity: number
     pathColor: string
     pathOpacity: number
+    directionColor: string
+    curvePoints: Vector3[]
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
     const lineRef = useRef<BufferGeometry>(null)
     useEffect(() => {
-        lineRef.current!.setFromPoints(
-            solveGeodesic(parametricSurface, startU, startV, uVel, vVel, step, nSteps).map(([u, v]) => parametricSurface(u, v))
-        )
-    }, [startU, startV, uVel, vVel, parametricSurface, step, nSteps])
+        lineRef.current!.setFromPoints(curvePoints)
+    }, [curvePoints])
+
+    // bases at the starting point
+    const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+    const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+
+    const directionVector = useMemo(() => {
+        const out = partialU.multiplyScalar(uVel).addScaledVector(partialV, vVel)
+        console.log(out)
+        out.normalize()
+        return out
+    }, [startU, startV, uVel, vVel, partialU, partialV])
 
     const {
         currentSurfaceColor,
@@ -96,6 +105,8 @@ function ThreeScene({
             <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
                 <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
+
+            <animated.arrowHelper args={[directionVector, startPos, 1, directionColor]}/>
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
                 <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
@@ -176,8 +187,15 @@ export default function App() {
     const [pathColor, setPathColor] = useState("#000000")
     const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
+    const [directionColor, setDirectionColor] = useState("#ff0000")
+
+    const curvePoints = useMemo(() => solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber), [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
+    
+    const [view, setView] = useState<"intrinsic" | "extrinsic">("extrinsic")
+
     return (
         <>
+            <button className="absolute left-2 top-2 px-2 z-10" onClick={() => setView(prev => prev === "intrinsic" ? "extrinsic" : "intrinsic")}>Switch to {view === "intrinsic" ? "extrinsic" : "intrinsic"} view</button>
             <div className="absolute right-0 top-0 p-4 flex flex-col gap-2 z-10 h-full overflow-y-auto">
                 <label className="flex items-center gap-2">x(u, v) = <input value={xFn} onChange={e => setXFn(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">y(u, v) = <input value={yFn} onChange={e => setYFn(e.target.value)} type="text" /></label>
@@ -224,9 +242,11 @@ export default function App() {
 
                 <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
                 <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
+
+                <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
             </div>
 
-            <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
+            {view === "extrinsic" ? <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
                 <ThreeScene
                     parametricSurface={parametricSurface}
                     startU={startUNumber}
@@ -237,8 +257,6 @@ export default function App() {
                     maxU={maxUNumber}
                     minV={minVNumber}
                     maxV={maxVNumber}
-                    step={stepNumber}
-                    nSteps={nStepsNumber}
                     surfaceColor={surfaceColor}
                     surfaceOpacity={surfaceOpacityNumber}
                     planeColor={planeColor}
@@ -247,9 +265,11 @@ export default function App() {
                     pointOpacity={pointOpacityNumber}
                     pathColor={pathColor}
                     pathOpacity={pathOpacityNumber}
+                    directionColor={directionColor}
+                    curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                 />
                 <OrbitControls/>
-            </Canvas>
+            </Canvas> : <p>graph</p>}
         </>
     )
 }

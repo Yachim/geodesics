@@ -40,11 +40,23 @@ type Matrix2 = [
     [number, number],
 ]
 
+export function uBase(surface: ParametricSurfaceFn, u: number, v: number): Vector3 {
+    return diffVec3WrtU(surface, u, v)
+}
+
+export function vBase(surface: ParametricSurfaceFn, u: number, v: number): Vector3 {
+    return diffVec3WrtV(surface, u, v)
+}
+
 // g[i, j] = g[j, i]
 function metric(surface: ParametricSurfaceFn, u: number, v: number): Matrix2 {
-    const uu = diffVec3WrtU(surface, u, v).dot(diffVec3WrtU(surface, u, v))
-    const uv = diffVec3WrtU(surface, u, v).dot(diffVec3WrtV(surface, u, v))
-    const vv = diffVec3WrtV(surface, u, v).dot(diffVec3WrtV(surface, u, v))
+    // bases
+    const partialU = uBase(surface, u, v)
+    const partialV = vBase(surface, u, v)
+
+    const uu = partialU.dot(partialU)
+    const uv = partialU.dot(partialV)
+    const vv = partialV.dot(partialV)
 
     return [
         [uu, uv],
@@ -64,6 +76,16 @@ function inverseMetric(metric: Matrix2): Matrix2 {
         [detReciprocal * vv, -detReciprocal * uv],
         [-detReciprocal * uv, detReciprocal * uu],
     ]
+}
+
+// returns the norm of the vector [uVel, vVel]
+export function norm(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number): number {
+    const lg = metric(surface, u, v)    
+    const uu = lg[0][0]
+    const uv = lg[0][1]
+    const vv = lg[1][1]
+
+    return uu * (uVel ** 2) + 2 * uv * uVel * vVel + vv * (vVel ** 2)
 }
 
 type ChristoffelSymbols = [Matrix2, Matrix2]
@@ -118,12 +140,14 @@ function christoffelSymbolsSecondKind(surface: ParametricSurfaceFn, u: number, v
     ]
 }
 
+// the velocity always gets normalized
 export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number, nSteps: number): [number, number][] {
     const points: [number, number][] = [[u, v]]
     let prevU = u
     let prevV = v
-    let prevUVel = uVel
-    let prevVVel = vVel
+    let velNorm = norm(surface, u, v, uVel, vVel)
+    let prevUVel = uVel / velNorm
+    let prevVVel = vVel / velNorm
     for (let i = 0; i < nSteps; i++) {
         const css = christoffelSymbolsSecondKind(surface, u, v)
         const newUVel = -(css[0][0][0] * (prevUVel ** 2) + 2 * css[0][0][1] * prevUVel * prevVVel + css[0][1][1] * (prevVVel ** 2)) * dt + prevUVel
@@ -135,8 +159,9 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
 
         prevU = newU
         prevV = newV
-        prevUVel = newUVel
-        prevVVel = newVVel
+        const velNorm = norm(surface, newU, newV, newUVel, newVVel)
+        prevUVel = newUVel / velNorm
+        prevVVel = newVVel / velNorm
     }
 
     return points
