@@ -22,7 +22,7 @@ export function translateFunction(
     result = result.replace(/\^/g, "**")
     result = result.replace(/%([a-tw-zA-Z])/g, (_, p1) => parametersMap[p1].toString() ?? "NaN")
 
-    return (u, v) => eval(result)
+    return (_u, _v) => eval(result)
 }
 
 export function findParameters(
