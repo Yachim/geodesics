@@ -7,7 +7,7 @@ import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
 import { solveGeodesic, uBase, vBase } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
-import { animated, config, useSpring } from "@react-spring/three"
+import { animated, easings, useSpring } from "@react-spring/three"
 import { CustomJXGBoard } from "./components/JXGBoard"
 
 function ThreeScene({
@@ -64,7 +64,6 @@ function ThreeScene({
 
     const directionVector = useMemo(() => {
         const out = partialU.multiplyScalar(uVel).addScaledVector(partialV, vVel)
-        console.log(out)
         out.normalize()
         return out
     }, [startU, startV, uVel, vVel, partialU, partialV])
@@ -87,7 +86,10 @@ function ThreeScene({
         currentPointOpacity: pointOpacity,
         currentPathColor: pathColor,
         currentPathOpacity: pathOpacity,
-        config: config.molasses,
+        config: {
+            duration: 500,
+            easings: easings.easeInCubic,
+        },
     })
 
     return (

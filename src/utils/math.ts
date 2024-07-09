@@ -91,22 +91,25 @@ export function norm(surface: ParametricSurfaceFn, u: number, v: number, uVel: n
 type ChristoffelSymbols = [Matrix2, Matrix2]
 
 // Γ[k, i, j] = Γ[k, j, i]
+// using extrinsic definition
 function christoffelSymbolsFirstKind(surface: ParametricSurfaceFn, u: number, v: number): ChristoffelSymbols {
-    // metric derivatives
-    const uu_u = diffWrtU((u_, v_) => metric(surface, u_, v_)[0][0], u, v)
-    const uu_v = diffWrtV((u_, v_) => metric(surface, u_, v_)[0][0], u, v)
-    const uv_u = diffWrtU((u_, v_) => metric(surface, u_, v_)[0][1], u, v)
-    const uv_v = diffWrtV((u_, v_) => metric(surface, u_, v_)[0][1], u, v)
-    const vv_u = diffWrtU((u_, v_) => metric(surface, u_, v_)[1][1], u, v)
-    const vv_v = diffWrtV((u_, v_) => metric(surface, u_, v_)[1][1], u, v)
+    // bases derivative
+    const u_u = diffVec3WrtU((u_, v_) => uBase(surface, u_, v_), u, v)
+    // u_v = v_u
+    const u_v = diffVec3WrtV((u_, v_) => uBase(surface, u_, v_), u, v)
+    const v_v = diffVec3WrtV((u_, v_) => vBase(surface, u_, v_), u, v)
+
+    // bases
+    const eu = uBase(surface, u, v)
+    const ev = vBase(surface, u, v)
 
     // christoffel symbols
-    const uuu = uu_u / 2
-    const uuv = uu_v / 2
-    const uvv = (2 * uv_v - vv_u) / 2
-    const vuu = (2 * uv_u - uu_v) / 2
-    const vuv = vv_u / 2
-    const vvv = vv_v / 2
+    const uuu = u_u.dot(eu)
+    const vuu = u_u.dot(ev)
+    const uuv = u_v.dot(eu)
+    const vuv = u_v.dot(ev)
+    const uvv = v_v.dot(eu)
+    const vvv = v_v.dot(ev)
 
     return [
         [
@@ -150,8 +153,8 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
     let prevVVel = vVel / velNorm
     for (let i = 0; i < nSteps; i++) {
         const css = christoffelSymbolsSecondKind(surface, u, v)
-        const newUVel = -(css[0][0][0] * (prevUVel ** 2) + 2 * css[0][0][1] * prevUVel * prevVVel + css[0][1][1] * (prevVVel ** 2)) * dt + prevUVel
-        const newVVel = -(css[1][0][0] * (prevUVel ** 2) + 2 * css[1][0][1] * prevUVel * prevVVel + css[1][1][1] * (prevVVel ** 2)) * dt + prevVVel
+        const newUVel = prevUVel - (css[0][0][0] * (prevUVel ** 2) + 2 * css[0][0][1] * prevUVel * prevVVel + css[0][1][1] * (prevVVel ** 2)) * dt
+        const newVVel = prevVVel - (css[1][0][0] * (prevUVel ** 2) + 2 * css[1][0][1] * prevUVel * prevVVel + css[1][1][1] * (prevVVel ** 2)) * dt
         const newU = prevU + prevUVel * dt
         const newV = prevV + prevVVel * dt
 
