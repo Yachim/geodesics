@@ -7,6 +7,7 @@ import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
 import { solveGeodesic } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
+import { animated, config, useSpring } from "@react-spring/three"
 
 function ThreeScene({
     startU,
@@ -20,6 +21,14 @@ function ThreeScene({
     maxV,
     step,
     nSteps,
+    surfaceColor,
+    surfaceOpacity,
+    planeColor,
+    planeOpacity,
+    pointColor,
+    pointOpacity,
+    pathColor,
+    pathOpacity,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -32,6 +41,14 @@ function ThreeScene({
     maxV: number
     step: number
     nSteps: number
+    surfaceColor: string
+    surfaceOpacity: number
+    planeColor: string
+    planeOpacity: number
+    pointColor: string
+    pointOpacity: number
+    pathColor: string
+    pathOpacity: number
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
@@ -41,6 +58,27 @@ function ThreeScene({
             solveGeodesic(parametricSurface, startU, startV, uVel, vVel, step, nSteps).map(([u, v]) => parametricSurface(u, v))
         )
     }, [startU, startV, uVel, vVel, parametricSurface, step, nSteps])
+
+    const {
+        currentSurfaceColor,
+        currentSurfaceOpacity,
+        currentPlaneColor,
+        currentPlaneOpacity,
+        currentPointColor,
+        currentPointOpacity,
+        currentPathColor,
+        currentPathOpacity,
+    } = useSpring({
+        currentSurfaceColor: surfaceColor,
+        currentSurfaceOpacity: surfaceOpacity,
+        currentPlaneColor: planeColor,
+        currentPlaneOpacity: planeOpacity,
+        currentPointColor: pointColor,
+        currentPointOpacity: pointOpacity,
+        currentPathColor: pathColor,
+        currentPathOpacity: pathOpacity,
+        config: config.molasses,
+    })
 
     return (
         <>
@@ -53,19 +91,19 @@ function ThreeScene({
                 target.y = out.y
                 target.z = out.z
             }, 25, 25)}>
-                <meshStandardMaterial color="gray" side={DoubleSide} />
+                <animated.meshStandardMaterial color={currentSurfaceColor} visible={currentSurfaceOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentSurfaceOpacity} />
             </mesh>
             <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                <meshStandardMaterial color="lightblue" side={DoubleSide} transparent opacity={0.5} />
+                <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
-                <meshStandardMaterial color="green" />
+                <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
             </Sphere>
 
             <line>
                 <bufferGeometry ref={lineRef} />
-                <lineBasicMaterial color="black" />
+                <animated.lineBasicMaterial color={currentPathColor} side={DoubleSide} visible={currentPathOpacity.to(val => val !== 0)} transparent opacity={currentPathOpacity} />
             </line>
         </>
     )
@@ -126,6 +164,18 @@ export default function App() {
     const [step, stepNumber, setStep] = useStringNumber(0.05)
     const [nSteps, nStepsNumber, setNSteps] = useStringNumber(50)
 
+    const [surfaceColor, setSurfaceColor] = useState("#aaaaaa")
+    const [surfaceOpacity, surfaceOpacityNumber, setSurfaceOpacity] = useStringNumber(1)
+
+    const [planeColor, setPlaneColor] = useState("#6fc0d8")
+    const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.5)
+
+    const [pointColor, setPointColor] = useState("#00ff00")
+    const [pointOpacity, pointOpacityNumber, setPointOpacity] = useStringNumber(1)
+
+    const [pathColor, setPathColor] = useState("#000000")
+    const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
+
     return (
         <>
             <div className="absolute right-0 top-0 p-4 flex flex-col gap-2 z-10 h-full overflow-y-auto">
@@ -161,6 +211,19 @@ export default function App() {
                 {presetList.map((preset, i) => 
                     <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
                 )}
+
+                <p className="underline">Cosmetic</p>
+                <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
+                <label className="flex items-center gap-2">surface opacity: <input value={surfaceOpacity} onChange={e => setSurfaceOpacity(e.target.value)} type="number" /></label>
+
+                <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>
+                <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
+
+                <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
+                <label className="flex items-center gap-2">point opacity: <input value={pointOpacity} onChange={e => setPointOpacity(e.target.value)} type="number" /></label>
+
+                <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
+                <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
             </div>
 
             <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
@@ -176,6 +239,14 @@ export default function App() {
                     maxV={maxVNumber}
                     step={stepNumber}
                     nSteps={nStepsNumber}
+                    surfaceColor={surfaceColor}
+                    surfaceOpacity={surfaceOpacityNumber}
+                    planeColor={planeColor}
+                    planeOpacity={planeOpacityNumber}
+                    pointColor={pointColor}
+                    pointOpacity={pointOpacityNumber}
+                    pathColor={pathColor}
+                    pathOpacity={pathOpacityNumber}
                 />
                 <OrbitControls/>
             </Canvas>
