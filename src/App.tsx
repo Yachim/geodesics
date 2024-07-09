@@ -8,6 +8,7 @@ import { useStringNumber } from "./utils/stringNumber"
 import { solveGeodesic, uBase, vBase } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { animated, config, useSpring } from "@react-spring/three"
+import { CustomJXGBoard } from "./components/JXGBoard"
 
 function ThreeScene({
     startU,
@@ -106,7 +107,7 @@ function ThreeScene({
                 <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
 
-            <animated.arrowHelper args={[directionVector, startPos, 1, directionColor]}/>
+            <arrowHelper args={[directionVector, startPos, 2, directionColor]}/>
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
                 <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
@@ -269,7 +270,19 @@ export default function App() {
                     curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                 />
                 <OrbitControls/>
-            </Canvas> : <p>graph</p>}
+            </Canvas> : <CustomJXGBoard id="intrinsic-view" bbox={[minUNumber, maxVNumber, maxUNumber, minVNumber]} initFn={board => {
+                const point = board.create("point", [startUNumber, startVNumber], {
+                    name: "",
+                    color: pointColor,
+                })
+                board.create("arrow", [point, [startUNumber + uVelNumber, startVNumber + vVelNumber]], {
+                    color: directionColor,
+                })
+
+                board.create("curve", [curvePoints.map(([u]) => u), curvePoints.map(([_, v]) => v)], {
+                    strokeColor: pathColor,
+                })
+            }}/>}
         </>
     )
 }

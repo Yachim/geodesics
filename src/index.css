@@ -12,6 +12,6 @@
     }
 
     input, button, select {
-        @apply border-text border-2;
+        @apply border-text border-2 text-text bg-bg;
     }
 }
