@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js"
-import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList, presets, translateFunction } from "./utils/functions"
+import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList, presets, runFunction } from "./utils/functions"
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { BufferGeometry, DoubleSide, Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
@@ -83,23 +83,17 @@ export default function App() {
     const [yFn, setYFn] = useState("")
     const [zFn, setZFn] = useState("")
 
-    const parametersList = useMemo(() => [...new Set(
-        ...findParameters(xFn),
-        ...findParameters(yFn),
-        ...findParameters(zFn),
-    )], [xFn, yFn, zFn])
-
     useEffect(() => {
-        const parameters: ParametersObj = {}
-        parametersList.forEach((k) => {
-            parameters[k] = 0            
-        })
+        const parametersList = [...new Set([
+            ...findParameters(xFn),
+            ...findParameters(yFn),
+            ...findParameters(zFn),
+        ])]
 
-        setParameters(prev => ({
-            ...parameters,
-            ...prev,
-        }))
-    }, [parametersList])
+        setParameters(prev => Object.fromEntries(parametersList.map((k) => 
+            [k, prev[k] ?? 0]
+        )))
+    }, [xFn, yFn, zFn])
 
     const usePreset = useCallback((preset: Preset) => {
         const presetObj = presets[preset]
@@ -118,9 +112,9 @@ export default function App() {
     useEffect(() => usePreset("sphere"), [])
 
     const parametricSurface = useCallback<ParametricSurfaceFn>((u, v) => new Vector3(
-        translateFunction(xFn, parameters)(u, v),
-        translateFunction(yFn, parameters)(u, v),
-        translateFunction(zFn, parameters)(u, v),
+        runFunction(xFn, parameters, u, v),
+        runFunction(yFn, parameters, u, v),
+        runFunction(zFn, parameters, u, v),
     ), [xFn, yFn, zFn, parameters])
 
     const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
@@ -134,7 +128,7 @@ export default function App() {
 
     return (
         <>
-            <div className="absolute right-0 top-0 p-4 flex flex-col gap-2 z-10">
+            <div className="absolute right-0 top-0 p-4 flex flex-col gap-2 z-10 h-full overflow-y-auto">
                 <label className="flex items-center gap-2">x(u, v) = <input value={xFn} onChange={e => setXFn(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">y(u, v) = <input value={yFn} onChange={e => setYFn(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">z(u, v) = <input value={zFn} onChange={e => setZFn(e.target.value)} type="text" /></label>

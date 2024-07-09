@@ -11,24 +11,28 @@ export type Range = [number, number]
 // trig functions are without Math. prefix, e.g. sin(x)
 // ^ is used for exponentiation
 
-export function translateFunction(
+export function runFunction(
     textFn: string,
     parametersMap: ParametersObj,
-): ParametricCoordFn {
+    u: number,
+    v: number,
+): number {
     let result = textFn
     result = result.replace(/\b(sin|cos|tan|acos|asin|atan)\b/g, "Math.$1")
-    result = result.replace(/%u/g, "u")
-    result = result.replace(/%v/g, "v")
+    result = result.replace(/%u/g, `(${u})`)
+    result = result.replace(/%v/g, `(${v})`)
     result = result.replace(/\^/g, "**")
-    result = result.replace(/%([a-tw-zA-Z])/g, (_, p1) => parametersMap[p1].toString() ?? "NaN")
+    result = result.replace(/%([a-tw-zA-Z])/g, (_, p1) => `(${parametersMap[p1] ?? "NaN"})`)
 
-    return (_u, _v) => eval(result)
+    return eval(result)
 }
 
 export function findParameters(
     textFn: string,
 ): string[] {
-    const result = [...textFn.matchAll(/%([a-tw-zA-Z])/g)]
+    const result = [
+        ...textFn.matchAll(/%([a-tw-zA-Z])/g),
+    ]
     const parameters = result.map(([_, p1]) => p1)
     return parameters
 }
@@ -49,7 +53,7 @@ export const presets: {
         x: "%r * sin(%u) * cos(%v)",
         y: "%r * cos(%u)",
         z: "-%r * sin(%u) * sin(%v)",
-        uRange: [0, Math.PI],
+        uRange: [1e-20, Math.PI], // weird overlap if minU = 0
         vRange: [0, 2 * Math.PI],
         parameters: {r: 5},
     },
