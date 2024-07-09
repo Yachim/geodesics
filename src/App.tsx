@@ -30,6 +30,7 @@ function ThreeScene({
     pathOpacity,
     directionColor,
     curvePoints,
+    directionLength,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -49,6 +50,7 @@ function ThreeScene({
     pathColor: string
     pathOpacity: number
     directionColor: string
+    directionLength: number
     curvePoints: Vector3[]
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
@@ -63,7 +65,10 @@ function ThreeScene({
     const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
 
     const directionVector = useMemo(() => {
-        const out = partialU.multiplyScalar(uVel).addScaledVector(partialV, vVel)
+        const out = new Vector3()
+        out.copy(partialU)
+        out.multiplyScalar(uVel)
+        out.addScaledVector(partialV, vVel)
         out.normalize()
         return out
     }, [startU, startV, uVel, vVel, partialU, partialV])
@@ -109,7 +114,7 @@ function ThreeScene({
                 <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
 
-            <arrowHelper args={[directionVector, startPos, 2, directionColor]}/>
+            <arrowHelper args={[directionVector, startPos, directionLength, directionColor]}/>
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
                 <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
@@ -191,6 +196,7 @@ export default function App() {
     const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
     const [directionColor, setDirectionColor] = useState("#ff0000")
+    const [directionLength, directionLengthNumber, setDirectionLength] = useStringNumber(2)
 
     const curvePoints = useMemo(() => solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber), [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
     
@@ -224,9 +230,10 @@ export default function App() {
                 <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
 
-                <p className="underline">Numerical Parameters</p>
+                <p className="underline">Geodesic Parameters</p>
                 <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
                 <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
+                {/* TODO: max arc length */}
 
                 <p className="underline">Presets</p>
                 {presetList.map((preset, i) => 
@@ -247,6 +254,7 @@ export default function App() {
                 <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
 
                 <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
+                <label className="flex items-center gap-2">direction length: <input value={directionLength} onChange={e => setDirectionLength(e.target.value)} type="number" /></label>
             </div>
 
             {view === "extrinsic" ? <Canvas camera={{position: [0, 10, 10]}} className="w-full h-full">
@@ -269,15 +277,19 @@ export default function App() {
                     pathColor={pathColor}
                     pathOpacity={pathOpacityNumber}
                     directionColor={directionColor}
+                    directionLength={directionLengthNumber}
                     curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                 />
                 <OrbitControls/>
             </Canvas> : <CustomJXGBoard id="intrinsic-view" bbox={[minUNumber, maxVNumber, maxUNumber, minVNumber]} initFn={board => {
+                // naive
+                const velNorm = Math.sqrt(uVelNumber ** 2 + vVelNumber ** 2)
+
                 const point = board.create("point", [startUNumber, startVNumber], {
                     name: "",
                     color: pointColor,
                 })
-                board.create("arrow", [point, [startUNumber + uVelNumber, startVNumber + vVelNumber]], {
+                board.create("arrow", [point, [startUNumber + uVelNumber / velNorm * directionLengthNumber, startVNumber + vVelNumber / velNorm * directionLengthNumber]], {
                     color: directionColor,
                 })
 

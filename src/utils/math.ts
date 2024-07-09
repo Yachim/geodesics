@@ -78,14 +78,19 @@ function inverseMetric(metric: Matrix2): Matrix2 {
     ]
 }
 
-// returns the norm of the vector [uVel, vVel]
-export function norm(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number): number {
+// returns the squared norm of the vector [uVel, vVel]
+export function normSquared(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number): number {
     const lg = metric(surface, u, v)    
     const uu = lg[0][0]
     const uv = lg[0][1]
     const vv = lg[1][1]
 
     return uu * (uVel ** 2) + 2 * uv * uVel * vVel + vv * (vVel ** 2)
+}
+
+// returns the norm of the vector [uVel, vVel]
+export function norm(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number): number {
+    return Math.sqrt(normSquared(surface, u, v, uVel, vVel))
 }
 
 type ChristoffelSymbols = [Matrix2, Matrix2]
@@ -152,7 +157,7 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
     let prevUVel = uVel / velNorm
     let prevVVel = vVel / velNorm
     for (let i = 0; i < nSteps; i++) {
-        const css = christoffelSymbolsSecondKind(surface, u, v)
+        const css = christoffelSymbolsSecondKind(surface, prevU, prevV)
         const newUVel = prevUVel - (css[0][0][0] * (prevUVel ** 2) + 2 * css[0][0][1] * prevUVel * prevVVel + css[0][1][1] * (prevVVel ** 2)) * dt
         const newVVel = prevVVel - (css[1][0][0] * (prevUVel ** 2) + 2 * css[1][0][1] * prevUVel * prevVVel + css[1][1][1] * (prevVVel ** 2)) * dt
         const newU = prevU + prevUVel * dt
@@ -162,9 +167,8 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
 
         prevU = newU
         prevV = newV
-        const velNorm = norm(surface, newU, newV, newUVel, newVVel)
-        prevUVel = newUVel / velNorm
-        prevVVel = newVVel / velNorm
+        prevUVel = newUVel
+        prevVVel = newVVel
     }
 
     return points
