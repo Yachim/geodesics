@@ -29,9 +29,11 @@ function ThreeScene({
     pointOpacity,
     pathColor,
     pathOpacity,
-    directionColor,
+    velocityColor,
     uBaseColor,
     vBaseColor,
+    showVelocity,
+    showBases,
     curvePoints,
     targetRef,
     camPosRef,
@@ -53,9 +55,11 @@ function ThreeScene({
     pointOpacity: number
     pathColor: string
     pathOpacity: number
-    directionColor: string
+    velocityColor: string
     uBaseColor: string
     vBaseColor: string
+    showVelocity: boolean
+    showBases: boolean
     curvePoints: Vector3[]
     targetRef: MutableRefObject<Vector3>
     camPosRef: MutableRefObject<Vector3>
@@ -138,14 +142,18 @@ function ThreeScene({
                 <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
 
-            {velocityMagnitude !== 0 &&
-                <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, directionColor, 0.3, 0.15]}/>
+            {velocityMagnitude !== 0 && showVelocity &&
+                <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
             }
-            {partialUMagnitude !== 0 && 
-                <arrowHelper args={[partialUNormalized, startPos, partialUMagnitude, uBaseColor, 0.3, 0.15]}/>
-            }
-            {partialVMagnitude !== 0 && 
-                <arrowHelper args={[partialVNormalized, startPos, partialVMagnitude, vBaseColor, 0.3, 0.15]}/>
+            {showBases &&
+                <>
+                    {partialUMagnitude !== 0 && 
+                        <arrowHelper args={[partialUNormalized, startPos, partialUMagnitude, uBaseColor, 0.3, 0.15]}/>
+                    }
+                    {partialVMagnitude !== 0 && 
+                        <arrowHelper args={[partialVNormalized, startPos, partialVMagnitude, vBaseColor, 0.3, 0.15]}/>
+                    }
+                </>
             }
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
@@ -262,9 +270,12 @@ export default function App() {
     const [pathColor, setPathColor] = useState("#000000")
     const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
-    const [directionColor, setDirectionColor] = useState("#ff0000")
+    const [velocityColor, setVelocityColor] = useState("#ff0000")
     const [uBaseColor, setUBaseColor] = useState("#ffff00")
     const [vBaseColor, setVBaseColor] = useState("#00ff00")
+
+    const [showVelocity, setShowVelocity] = useState(true)
+    const [showBases, setShowBases] = useState(true)
 
     const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
     const getCurvePoints = useCallback(() =>
@@ -325,9 +336,11 @@ export default function App() {
                             pointOpacity={pointOpacityNumber}
                             pathColor={pathColor}
                             pathOpacity={pathOpacityNumber}
-                            directionColor={directionColor}
+                            velocityColor={velocityColor}
+                            showVelocity={showVelocity}
                             uBaseColor={uBaseColor}
                             vBaseColor={vBaseColor}
+                            showBases={showBases}
                             curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                             camPosRef={camPosRef}
                             targetRef={targetRef}
@@ -349,7 +362,7 @@ export default function App() {
                         color: pointColor,
                     })
                     board.create("arrow", [point, [startUNumber + uVelNumber, startVNumber + vVelNumber]], {
-                        color: directionColor,
+                        color: velocityColor,
                     })
 
                     board.create("curve", [curvePoints.map(([u]) => u), curvePoints.map(([_, v]) => v)], {
@@ -379,6 +392,13 @@ export default function App() {
                         <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
                     </div>
 
+                    <p className="p-1 font-bold text-center">Presets</p>
+                    <div className="gap-2 grid grid-cols-2 p-2">
+                        {presetList.map((preset, i) => 
+                            <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
+                        )}
+                    </div>
+
                     <p className="p-1 font-bold text-center">Path</p>
                     <div className="flex flex-col gap-2 p-2">
                         <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
@@ -391,13 +411,6 @@ export default function App() {
                         <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
                         <label className="flex items-center gap-2">max length: <input value={maxLength} onChange={e => setMaxLength(e.target.value)} type="text" /></label>
                         <button onClick={getCurvePoints}>Solve Geodesic</button>
-                    </div>
-
-                    <p className="p-1 font-bold text-center">Presets</p>
-                    <div className="gap-2 grid grid-cols-2 p-2">
-                        {presetList.map((preset, i) => 
-                            <button onClick={() => usePreset(preset)} key={`preset-button-${i}`}>{capitalize(preset)}</button>
-                        )}
                     </div>
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>
@@ -414,9 +427,12 @@ export default function App() {
                         <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
 
-                        <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">velocity color: <input value={velocityColor} onChange={e => setVelocityColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">show velocity: <input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" /></label>
+
                         <label className="flex items-center gap-2">u base color: <input value={uBaseColor} onChange={e => setUBaseColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">v base color: <input value={vBaseColor} onChange={e => setVBaseColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">show bases: <input checked={showBases} onChange={e => setShowBases(e.target.checked)} type="checkbox" /></label>
                     </div>
                 </div>
             </div>
