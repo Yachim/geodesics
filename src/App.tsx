@@ -1,5 +1,5 @@
-import { Canvas } from "@react-three/fiber"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Canvas, useFrame } from "@react-three/fiber"
+import { MutableRefObject, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js"
 import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList, presets, runFunction } from "./utils/functions"
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
@@ -9,6 +9,7 @@ import { solveGeodesic, uBase, vBase } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { animated, easings, useSpring } from "@react-spring/three"
 import { CustomJXGBoard } from "./components/JXGBoard"
+import { OrbitControls as OrbitControlsType } from "three/examples/jsm/Addons.js"
 
 function ThreeScene({
     startU,
@@ -31,6 +32,8 @@ function ThreeScene({
     directionColor,
     curvePoints,
     directionLength,
+    targetRef,
+    camPosRef,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -52,6 +55,8 @@ function ThreeScene({
     directionColor: string
     directionLength: number
     curvePoints: Vector3[]
+    targetRef: MutableRefObject<Vector3>
+    camPosRef: MutableRefObject<Vector3>
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
@@ -97,8 +102,21 @@ function ThreeScene({
         },
     })
 
+    const orbitControlsRef = useRef(null)
+
+    useFrame(({camera}) => {
+        const orbitControlsCurrent = orbitControlsRef.current as (OrbitControlsType | null)
+
+        if (orbitControlsCurrent) {
+            targetRef.current = orbitControlsCurrent.target
+        }
+        camPosRef.current = camera.position
+        
+    })
+
     return (
         <>
+            <OrbitControls ref={orbitControlsRef} />
             <ambientLight intensity={Math.PI / 2} />
             <spotLight position={[30, 30, 30]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
             <pointLight position={[-30, -30, -30]} decay={0} intensity={Math.PI} />
@@ -125,6 +143,33 @@ function ThreeScene({
                 <animated.lineBasicMaterial color={currentPathColor} side={DoubleSide} visible={currentPathOpacity.to(val => val !== 0)} transparent opacity={currentPathOpacity} />
             </line>
         </>
+    )
+}
+
+function AxesScene({
+    camPosRef,
+    targetRef,
+    distance,
+    size,
+}: {
+    camPosRef: RefObject<Vector3>
+    targetRef: RefObject<Vector3>
+    distance: number
+    size: number
+}) {
+    useFrame(({camera, scene}) => {
+        if (!camPosRef.current || !targetRef.current) {
+            return
+        }
+
+        camera.position.copy(camPosRef.current)
+        camera.position.sub(targetRef.current)
+        camera.position.setLength(distance)
+        camera.lookAt(scene.position)
+    })
+
+    return (
+        <axesHelper args={[size]} />
     )
 }
 
@@ -230,35 +275,51 @@ export default function App() {
         ]
     }, [maxUNumber, minUNumber, maxVNumber, minVNumber, view])
 
+    const camPosRef = useRef(new Vector3())
+    const targetRef = useRef(new Vector3())
+
     return (
         <>
             <button className="absolute left-2 top-2 px-2 z-10" onClick={() => setView(prev => prev === "intrinsic" ? "extrinsic" : "intrinsic")}>Switch to {view === "intrinsic" ? "extrinsic" : "intrinsic"} view</button>
             <div className="flex w-full h-full">
-                {view === "extrinsic" ? <Canvas camera={{position: [0, 10, 10]}}>
-                    <ThreeScene
-                        parametricSurface={parametricSurface}
-                        startU={startUNumber}
-                        startV={startVNumber}
-                        uVel={uVelNumber}
-                        vVel={vVelNumber}
-                        minU={minUNumber}
-                        maxU={maxUNumber}
-                        minV={minVNumber}
-                        maxV={maxVNumber}
-                        surfaceColor={surfaceColor}
-                        surfaceOpacity={surfaceOpacityNumber}
-                        planeColor={planeColor}
-                        planeOpacity={planeOpacityNumber}
-                        pointColor={pointColor}
-                        pointOpacity={pointOpacityNumber}
-                        pathColor={pathColor}
-                        pathOpacity={pathOpacityNumber}
-                        directionColor={directionColor}
-                        directionLength={directionLengthNumber}
-                        curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
-                    />
-                    <OrbitControls/>
-                </Canvas> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
+                {view === "extrinsic" ? <>
+                    <Canvas camera={{position: [0, 10, 10]}}>
+                        <ThreeScene
+                            parametricSurface={parametricSurface}
+                            startU={startUNumber}
+                            startV={startVNumber}
+                            uVel={uVelNumber}
+                            vVel={vVelNumber}
+                            minU={minUNumber}
+                            maxU={maxUNumber}
+                            minV={minVNumber}
+                            maxV={maxVNumber}
+                            surfaceColor={surfaceColor}
+                            surfaceOpacity={surfaceOpacityNumber}
+                            planeColor={planeColor}
+                            planeOpacity={planeOpacityNumber}
+                            pointColor={pointColor}
+                            pointOpacity={pointOpacityNumber}
+                            pathColor={pathColor}
+                            pathOpacity={pathOpacityNumber}
+                            directionColor={directionColor}
+                            directionLength={directionLengthNumber}
+                            curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
+                            camPosRef={camPosRef}
+                            targetRef={targetRef}
+                        />
+                    </Canvas>
+                    <div className="absolute left-0 bottom-0 w-[150px] h-[150px]">
+                        <Canvas className="w-full h-full" camera={{position: [0, 10, 10]}}>
+                            <AxesScene
+                                camPosRef={camPosRef}
+                                targetRef={targetRef}
+                                size={5}
+                                distance={10}
+                            />
+                        </Canvas>
+                    </div>
+                </> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
                     // naive
                     const velNorm = Math.sqrt(uVelNumber ** 2 + vVelNumber ** 2)
 
