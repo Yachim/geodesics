@@ -30,8 +30,9 @@ function ThreeScene({
     pathColor,
     pathOpacity,
     directionColor,
+    uBaseColor,
+    vBaseColor,
     curvePoints,
-    directionLength,
     targetRef,
     camPosRef,
 }: {
@@ -53,7 +54,8 @@ function ThreeScene({
     pathColor: string
     pathOpacity: number
     directionColor: string
-    directionLength: number
+    uBaseColor: string
+    vBaseColor: string
     curvePoints: Vector3[]
     targetRef: MutableRefObject<Vector3>
     camPosRef: MutableRefObject<Vector3>
@@ -67,16 +69,29 @@ function ThreeScene({
 
     // bases at the starting point
     const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
-    const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+    const partialUMagnitude = useMemo(() => partialU.length(), [partialU])
+    const partialUNormalized = useMemo(() => (new Vector3()).copy(partialU).normalize(), [partialU])
+    useEffect(() => {
+        console.table({partialU, partialUMagnitude, partialUNormalized})
+    }, [partialU, partialUMagnitude, partialUNormalized])
 
-    const directionVector = useMemo(() => {
-        const out = new Vector3()
-        out.copy(partialU)
-        out.multiplyScalar(uVel)
-        out.addScaledVector(partialV, vVel)
-        out.normalize()
-        return out
-    }, [startU, startV, uVel, vVel, partialU, partialV])
+    const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+    const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
+    const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
+    useEffect(() => {
+        console.table({partialV, partialVMagnitude, partialVNormalized})
+    }, [partialV, partialVMagnitude, partialVNormalized])
+
+    const velocity = useMemo(() => new Vector3(
+        uVel * partialU.x + vVel * partialV.x,
+        uVel * partialU.y + vVel * partialV.y,
+        uVel * partialU.z + vVel * partialV.z,
+    ), [startU, startV, uVel, vVel, partialU, partialV])
+    const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
+    const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
+    useEffect(() => {
+        console.table({velocity, velocityMagnitude, velocityNormalized})
+    }, [velocity, velocityMagnitude, velocityNormalized])
 
     const {
         currentSurfaceColor,
@@ -132,7 +147,15 @@ function ThreeScene({
                 <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
             </Plane>
 
-            <arrowHelper args={[directionVector, startPos, directionLength, directionColor]}/>
+            {velocityMagnitude !== 0 &&
+                <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, directionColor, 0.3, 0.15]}/>
+            }
+            {partialUMagnitude !== 0 && 
+                <arrowHelper args={[partialUNormalized, startPos, partialUMagnitude, uBaseColor, 0.3, 0.15]}/>
+            }
+            {partialVMagnitude !== 0 && 
+                <arrowHelper args={[partialVNormalized, startPos, partialVMagnitude, vBaseColor, 0.3, 0.15]}/>
+            }
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
                 <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
@@ -249,7 +272,8 @@ export default function App() {
     const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
     const [directionColor, setDirectionColor] = useState("#ff0000")
-    const [directionLength, directionLengthNumber, setDirectionLength] = useStringNumber(2)
+    const [uBaseColor, setUBaseColor] = useState("#ffff00")
+    const [vBaseColor, setVBaseColor] = useState("#00ff00")
 
     const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
     const getCurvePoints = useCallback(() =>
@@ -303,7 +327,8 @@ export default function App() {
                             pathColor={pathColor}
                             pathOpacity={pathOpacityNumber}
                             directionColor={directionColor}
-                            directionLength={directionLengthNumber}
+                            uBaseColor={uBaseColor}
+                            vBaseColor={vBaseColor}
                             curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                             camPosRef={camPosRef}
                             targetRef={targetRef}
@@ -320,14 +345,11 @@ export default function App() {
                         </Canvas>
                     </div>
                 </> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
-                    // naive
-                    const velNorm = Math.sqrt(uVelNumber ** 2 + vVelNumber ** 2)
-
                     const point = board.create("point", [startUNumber, startVNumber], {
                         name: "",
                         color: pointColor,
                     })
-                    board.create("arrow", [point, [startUNumber + uVelNumber / velNorm * directionLengthNumber, startVNumber + vVelNumber / velNorm * directionLengthNumber]], {
+                    board.create("arrow", [point, [startUNumber + uVelNumber, startVNumber + vVelNumber]], {
                         color: directionColor,
                     })
 
@@ -394,7 +416,8 @@ export default function App() {
                         <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
 
                         <label className="flex items-center gap-2">direction color: <input value={directionColor} onChange={e => setDirectionColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">direction length: <input value={directionLength} onChange={e => setDirectionLength(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">u base color: <input value={uBaseColor} onChange={e => setUBaseColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">v base color: <input value={vBaseColor} onChange={e => setVBaseColor(e.target.value)} type="color" /></label>
                     </div>
                 </div>
             </div>

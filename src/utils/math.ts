@@ -153,9 +153,8 @@ export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number
     const points: [number, number][] = [[u, v]]
     let prevU = u
     let prevV = v
-    let velNorm = norm(surface, u, v, uVel, vVel)
-    let prevUVel = uVel / velNorm
-    let prevVVel = vVel / velNorm
+    let prevUVel = uVel
+    let prevVVel = vVel
     let length = 0
     for (let i = 0; i < nSteps; i++) {
         const css = christoffelSymbolsSecondKind(surface, prevU, prevV)
