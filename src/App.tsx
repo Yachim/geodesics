@@ -278,7 +278,7 @@ export default function App() {
     const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
     const getCurvePoints = useCallback(() =>
         setCurvePoints(solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLengthNumber)),
-    [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
+    [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLength])
 
     const clearCurve = useCallback(() => {
         setCurvePoints([])
