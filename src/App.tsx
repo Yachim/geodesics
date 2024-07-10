@@ -71,16 +71,10 @@ function ThreeScene({
     const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
     const partialUMagnitude = useMemo(() => partialU.length(), [partialU])
     const partialUNormalized = useMemo(() => (new Vector3()).copy(partialU).normalize(), [partialU])
-    useEffect(() => {
-        console.table({partialU, partialUMagnitude, partialUNormalized})
-    }, [partialU, partialUMagnitude, partialUNormalized])
-
+    
     const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
     const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
     const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
-    useEffect(() => {
-        console.table({partialV, partialVMagnitude, partialVNormalized})
-    }, [partialV, partialVMagnitude, partialVNormalized])
 
     const velocity = useMemo(() => new Vector3(
         uVel * partialU.x + vVel * partialV.x,
@@ -89,9 +83,6 @@ function ThreeScene({
     ), [startU, startV, uVel, vVel, partialU, partialV])
     const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
-    useEffect(() => {
-        console.table({velocity, velocityMagnitude, velocityNormalized})
-    }, [velocity, velocityMagnitude, velocityNormalized])
 
     const {
         currentSurfaceColor,
