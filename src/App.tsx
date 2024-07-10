@@ -279,6 +279,14 @@ export default function App() {
     const getCurvePoints = useCallback(() =>
         setCurvePoints(solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLengthNumber)),
     [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber])
+
+    const clearCurve = useCallback(() => {
+        setCurvePoints([])
+    }, [])
+
+    useEffect(() => {
+        clearCurve()
+    }, [xFn, yFn, zFn])
     
     const [view, setView] = useState<"intrinsic" | "extrinsic">("extrinsic")
     const bbox: [number, number, number, number] = useMemo(() => {
