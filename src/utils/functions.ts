@@ -19,7 +19,7 @@ export function runFunction(
     v: number,
 ): number {
     let result = textFn
-    result = result.replace(/\b(sin|cos|tan|acos|asin|atan|sinh|cosh|tanh|asinh|acosh|atanh)\b/g, "Math.$1")
+    result = result.replace(/\b(sin|cos|tan|acos|asin|atan|sinh|cosh|tanh|asinh|acosh|atanh|sqrt)\b/g, "Math.$1")
     result = result.replace(/%pi/g, Math.PI.toString())
     result = result.replace(/%e/g, Math.E.toString())
     result = result.replace(/%u/g, `(${u})`)
