@@ -7,7 +7,6 @@ import { geodesicStep } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { CustomJXGBoard } from "./components/JXGBoard"
 import { ThreeScene } from "./components/ThreeScene"
-import { getBoardByContainerId } from "jsxgraph"
 
 function AxesScene({
     camPosRef,
@@ -204,23 +203,6 @@ export default function App() {
     }, [])
     
     const [view, setView] = useState<"intrinsic" | "extrinsic">("extrinsic")
-    const bbox: [number, number, number, number] = useMemo(() => {
-        const width = maxUNumber - minUNumber
-        const height = maxVNumber - minVNumber
-        let centerX = minUNumber + width / 2
-        let centerY = minVNumber + height / 2
-
-        const size = Math.max(width, height)
-
-        const marginSize = size * 0.05
-
-        return [
-            centerX - size / 2 - marginSize,
-            centerY + size / 2 + marginSize,
-            centerX + size / 2 + marginSize,
-            centerY - size / 2 - marginSize,
-        ] as [number, number, number, number]
-    }, [maxUNumber, minUNumber, maxVNumber, minVNumber])
 
     const camPosRef = useRef(new Vector3())
     const targetRef = useRef(new Vector3())
@@ -269,7 +251,7 @@ export default function App() {
                             />
                         </Canvas>
                     </div>
-                </> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
+                </> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={[-1.8849555921538759, 6.5973445725385655, 5.026548245743669, -0.3141592653589793]} initFn={board => {
                     board.create("arrow", [[u, v], [u + uVel, v + vVel]], {
                         color: velocityColor,
                     })
