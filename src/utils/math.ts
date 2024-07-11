@@ -163,29 +163,3 @@ export function geodesicStep(surface: ParametricSurfaceFn, u: number, v: number,
         [newUVel, newVVel],
     ]
 }
-
-export function solveGeodesic(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number, nSteps: number, maxLength: number): [number, number][] {
-    const points: [number, number][] = [[u, v]]
-    let prevU = u
-    let prevV = v
-    let prevUVel = uVel
-    let prevVVel = vVel
-    let length = 0
-    for (let i = 0; i < nSteps; i++) {
-        const [[newU, newV], [newUVel, newVVel]] = geodesicStep(surface, prevU, prevV, prevUVel, prevVVel, dt)
-
-        length += norm(surface, prevU, prevV, newU - prevU, newV - prevV)
-        points.push([newU, newV])
-
-        if (length >= maxLength && maxLength !== 0) {
-            break
-        }
-
-        prevU = newU
-        prevV = newV
-        prevUVel = newUVel
-        prevVVel = newVVel
-    }
-
-    return points
-}
