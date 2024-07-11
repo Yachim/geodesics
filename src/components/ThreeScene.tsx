@@ -1,0 +1,165 @@
+import { useSpring, easings, animated } from "@react-spring/three"
+import { OrbitControls, Plane, Sphere } from "@react-three/drei"
+import { useFrame } from "@react-three/fiber"
+import { MutableRefObject, useMemo, useRef, useEffect } from "react"
+import { Vector3, BufferGeometry, DoubleSide } from "three"
+import { OrbitControls as OrbitControlsType, ParametricGeometry } from "three/examples/jsm/Addons.js"
+import { ParametricSurfaceFn } from "../utils/functions"
+import { uBase, vBase } from "../utils/math"
+
+export function ThreeScene({
+    startU,
+    startV,
+    uVel,
+    vVel,
+    parametricSurface,
+    minU,
+    maxU,
+    minV,
+    maxV,
+    surfaceColor,
+    surfaceOpacity,
+    planeColor,
+    planeOpacity,
+    pointColor,
+    pointOpacity,
+    pathColor,
+    pathOpacity,
+    velocityColor,
+    uBaseColor,
+    vBaseColor,
+    showVelocity,
+    showBases,
+    curvePoints,
+    targetRef,
+    camPosRef,
+}: {
+    parametricSurface: ParametricSurfaceFn
+    startU: number
+    startV: number
+    uVel: number
+    vVel: number
+    minU: number
+    maxU: number
+    minV: number
+    maxV: number
+    surfaceColor: string
+    surfaceOpacity: number
+    planeColor: string
+    planeOpacity: number
+    pointColor: string
+    pointOpacity: number
+    pathColor: string
+    pathOpacity: number
+    velocityColor: string
+    uBaseColor: string
+    vBaseColor: string
+    showVelocity: boolean
+    showBases: boolean
+    curvePoints: Vector3[]
+    targetRef: MutableRefObject<Vector3>
+    camPosRef: MutableRefObject<Vector3>
+}) {
+    const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
+
+    const lineRef = useRef<BufferGeometry>(null)
+    useEffect(() => {
+        lineRef.current!.setFromPoints(curvePoints)
+    }, [curvePoints])
+
+    // bases at the starting point
+    const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+    const partialUMagnitude = useMemo(() => partialU.length(), [partialU])
+    const partialUNormalized = useMemo(() => (new Vector3()).copy(partialU).normalize(), [partialU])
+    
+    const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
+    const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
+    const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
+
+    const velocity = useMemo(() => new Vector3(
+        uVel * partialU.x + vVel * partialV.x,
+        uVel * partialU.y + vVel * partialV.y,
+        uVel * partialU.z + vVel * partialV.z,
+    ), [startU, startV, uVel, vVel, partialU, partialV])
+    const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
+    const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
+
+    const {
+        currentSurfaceColor,
+        currentSurfaceOpacity,
+        currentPlaneColor,
+        currentPlaneOpacity,
+        currentPointColor,
+        currentPointOpacity,
+        currentPathColor,
+        currentPathOpacity,
+    } = useSpring({
+        currentSurfaceColor: surfaceColor,
+        currentSurfaceOpacity: surfaceOpacity,
+        currentPlaneColor: planeColor,
+        currentPlaneOpacity: planeOpacity,
+        currentPointColor: pointColor,
+        currentPointOpacity: pointOpacity,
+        currentPathColor: pathColor,
+        currentPathOpacity: pathOpacity,
+        config: {
+            duration: 500,
+            easings: easings.easeInCubic,
+        },
+    })
+
+    const orbitControlsRef = useRef(null)
+
+    useFrame(({camera}) => {
+        const orbitControlsCurrent = orbitControlsRef.current as (OrbitControlsType | null)
+
+        if (orbitControlsCurrent) {
+            targetRef.current = orbitControlsCurrent.target
+        }
+        camPosRef.current = camera.position
+        
+    })
+
+    return (
+        <>
+            <OrbitControls ref={orbitControlsRef} />
+            <ambientLight intensity={Math.PI / 2} />
+            <spotLight position={[30, 30, 30]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
+            <pointLight position={[-30, -30, -30]} decay={0} intensity={Math.PI} />
+            <mesh geometry={new ParametricGeometry((u, v, target) => {
+                const out = parametricSurface(minU + u * (maxU - minU), minV + v * (maxV - minV))
+                target.x = out.x
+                target.y = out.y
+                target.z = out.z
+            }, 25, 25)}>
+                <animated.meshStandardMaterial color={currentSurfaceColor} visible={currentSurfaceOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentSurfaceOpacity} />
+            </mesh>
+            <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+                <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
+            </Plane>
+
+            {showBases &&
+                <>
+                    {partialUMagnitude !== 0 && 
+                        <arrowHelper args={[partialUNormalized, startPos, partialUMagnitude, uBaseColor, 0.3, 0.15]}/>
+                    }
+                    {partialVMagnitude !== 0 && 
+                        <arrowHelper args={[partialVNormalized, startPos, partialVMagnitude, vBaseColor, 0.3, 0.15]}/>
+                    }
+                </>
+            }
+            {velocityMagnitude !== 0 && showVelocity &&
+                <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
+            }
+
+            <Sphere args={[0.2, 20, 20]} position={startPos}>
+                <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
+            </Sphere>
+
+            <line>
+                <bufferGeometry ref={lineRef} />
+                <animated.lineBasicMaterial color={currentPathColor} side={DoubleSide} visible={currentPathOpacity.to(val => val !== 0)} transparent opacity={currentPathOpacity} />
+            </line>
+        </>
+    )
+}

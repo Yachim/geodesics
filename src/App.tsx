@@ -1,172 +1,13 @@
 import { Canvas, useFrame } from "@react-three/fiber"
-import { MutableRefObject, RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { ParametricGeometry } from "three/addons/geometries/ParametricGeometry.js"
-import { findParameters, ParametersObj, ParametricSurfaceFn, Preset, presetList, presets, runFunction } from "./utils/functions"
-import { OrbitControls, Plane, Sphere } from "@react-three/drei"
-import { BufferGeometry, DoubleSide, Vector3 } from "three"
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { findParameters, ParametersObj, ParametricSurfaceFn, prepareFunction, Preset, presetList, presets, runFunction } from "./utils/functions"
+import { Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
-import { solveGeodesic, uBase, vBase } from "./utils/math"
+import { geodesicStep } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
-import { animated, easings, useSpring } from "@react-spring/three"
 import { CustomJXGBoard } from "./components/JXGBoard"
-import { OrbitControls as OrbitControlsType } from "three/examples/jsm/Addons.js"
-
-function ThreeScene({
-    startU,
-    startV,
-    uVel,
-    vVel,
-    parametricSurface,
-    minU,
-    maxU,
-    minV,
-    maxV,
-    surfaceColor,
-    surfaceOpacity,
-    planeColor,
-    planeOpacity,
-    pointColor,
-    pointOpacity,
-    pathColor,
-    pathOpacity,
-    velocityColor,
-    uBaseColor,
-    vBaseColor,
-    showVelocity,
-    showBases,
-    curvePoints,
-    targetRef,
-    camPosRef,
-}: {
-    parametricSurface: ParametricSurfaceFn
-    startU: number
-    startV: number
-    uVel: number
-    vVel: number
-    minU: number
-    maxU: number
-    minV: number
-    maxV: number
-    surfaceColor: string
-    surfaceOpacity: number
-    planeColor: string
-    planeOpacity: number
-    pointColor: string
-    pointOpacity: number
-    pathColor: string
-    pathOpacity: number
-    velocityColor: string
-    uBaseColor: string
-    vBaseColor: string
-    showVelocity: boolean
-    showBases: boolean
-    curvePoints: Vector3[]
-    targetRef: MutableRefObject<Vector3>
-    camPosRef: MutableRefObject<Vector3>
-}) {
-    const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
-
-    const lineRef = useRef<BufferGeometry>(null)
-    useEffect(() => {
-        lineRef.current!.setFromPoints(curvePoints)
-    }, [curvePoints])
-
-    // bases at the starting point
-    const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
-    const partialUMagnitude = useMemo(() => partialU.length(), [partialU])
-    const partialUNormalized = useMemo(() => (new Vector3()).copy(partialU).normalize(), [partialU])
-    
-    const partialV = useMemo(() => vBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
-    const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
-    const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
-
-    const velocity = useMemo(() => new Vector3(
-        uVel * partialU.x + vVel * partialV.x,
-        uVel * partialU.y + vVel * partialV.y,
-        uVel * partialU.z + vVel * partialV.z,
-    ), [startU, startV, uVel, vVel, partialU, partialV])
-    const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
-    const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
-
-    const {
-        currentSurfaceColor,
-        currentSurfaceOpacity,
-        currentPlaneColor,
-        currentPlaneOpacity,
-        currentPointColor,
-        currentPointOpacity,
-        currentPathColor,
-        currentPathOpacity,
-    } = useSpring({
-        currentSurfaceColor: surfaceColor,
-        currentSurfaceOpacity: surfaceOpacity,
-        currentPlaneColor: planeColor,
-        currentPlaneOpacity: planeOpacity,
-        currentPointColor: pointColor,
-        currentPointOpacity: pointOpacity,
-        currentPathColor: pathColor,
-        currentPathOpacity: pathOpacity,
-        config: {
-            duration: 500,
-            easings: easings.easeInCubic,
-        },
-    })
-
-    const orbitControlsRef = useRef(null)
-
-    useFrame(({camera}) => {
-        const orbitControlsCurrent = orbitControlsRef.current as (OrbitControlsType | null)
-
-        if (orbitControlsCurrent) {
-            targetRef.current = orbitControlsCurrent.target
-        }
-        camPosRef.current = camera.position
-        
-    })
-
-    return (
-        <>
-            <OrbitControls ref={orbitControlsRef} />
-            <ambientLight intensity={Math.PI / 2} />
-            <spotLight position={[30, 30, 30]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
-            <pointLight position={[-30, -30, -30]} decay={0} intensity={Math.PI} />
-            <mesh geometry={new ParametricGeometry((u, v, target) => {
-                const out = parametricSurface(minU + u * (maxU - minU), minV + v * (maxV - minV))
-                target.x = out.x
-                target.y = out.y
-                target.z = out.z
-            }, 25, 25)}>
-                <animated.meshStandardMaterial color={currentSurfaceColor} visible={currentSurfaceOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentSurfaceOpacity} />
-            </mesh>
-            <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
-            </Plane>
-
-            {velocityMagnitude !== 0 && showVelocity &&
-                <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
-            }
-            {showBases &&
-                <>
-                    {partialUMagnitude !== 0 && 
-                        <arrowHelper args={[partialUNormalized, startPos, partialUMagnitude, uBaseColor, 0.3, 0.15]}/>
-                    }
-                    {partialVMagnitude !== 0 && 
-                        <arrowHelper args={[partialVNormalized, startPos, partialVMagnitude, vBaseColor, 0.3, 0.15]}/>
-                    }
-                </>
-            }
-
-            <Sphere args={[0.2, 20, 20]} position={startPos}>
-                <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
-            </Sphere>
-
-            <line>
-                <bufferGeometry ref={lineRef} />
-                <animated.lineBasicMaterial color={currentPathColor} side={DoubleSide} visible={currentPathOpacity.to(val => val !== 0)} transparent opacity={currentPathOpacity} />
-            </line>
-        </>
-    )
-}
+import { ThreeScene } from "./components/ThreeScene"
+import { getBoardByContainerId } from "jsxgraph"
 
 function AxesScene({
     camPosRef,
@@ -204,8 +45,11 @@ export default function App() {
     const [parameters, setParameters] = useState<ParametersObj>({})
 
     const [xFn, setXFn] = useState("")
+    const xFnPrepared = useMemo(() => prepareFunction(xFn, parameters), [xFn, parameters])
     const [yFn, setYFn] = useState("")
+    const yFnPrepared = useMemo(() => prepareFunction(yFn, parameters), [yFn, parameters])
     const [zFn, setZFn] = useState("")
+    const zFnPrepared = useMemo(() => prepareFunction(zFn, parameters), [zFn, parameters])
 
     useEffect(() => {
         const parametersList = [...new Set([
@@ -238,31 +82,25 @@ export default function App() {
     const parametricSurface = useCallback<ParametricSurfaceFn>((u, v) => {
         try {
             return new Vector3(
-                runFunction(xFn, parameters, u, v),
-                runFunction(yFn, parameters, u, v),
-                runFunction(zFn, parameters, u, v),
+                runFunction(xFnPrepared, u, v),
+                runFunction(yFnPrepared, u, v),
+                runFunction(zFnPrepared, u, v),
             )
         }
         catch {
             return new Vector3(NaN, NaN, NaN)
         }
-    }, [xFn, yFn, zFn, parameters])
+    }, [xFnPrepared, yFnPrepared, zFnPrepared, parameters])
 
-    const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
-    const [startV, startVNumber, setStartV] = useStringNumber(0)
-
-    const [uVel, uVelNumber, setUVel] = useStringNumber(0)
-    const [vVel, vVelNumber, setVVel] = useStringNumber(1)
-
-    const [step, stepNumber, setStep] = useStringNumber(0.01)
-    const [nSteps, nStepsNumber, setNSteps] = useStringNumber(5000)
-    const [maxLength, maxLengthNumber, setMaxLength] = useStringNumber(32, 0)
+    useEffect(() => {
+        parametricSurfaceRef.current = parametricSurface
+    }, [parametricSurface])
 
     const [surfaceColor, setSurfaceColor] = useState("#aaaaaa")
     const [surfaceOpacity, surfaceOpacityNumber, setSurfaceOpacity] = useStringNumber(1)
 
     const [planeColor, setPlaneColor] = useState("#6fc0d8")
-    const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.5)
+    const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.4)
 
     const [pointColor, setPointColor] = useState("#00ff00")
     const [pointOpacity, pointOpacityNumber, setPointOpacity] = useStringNumber(1)
@@ -270,25 +108,100 @@ export default function App() {
     const [pathColor, setPathColor] = useState("#000000")
     const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
-    const [velocityColor, setVelocityColor] = useState("#ff0000")
-    const [uBaseColor, setUBaseColor] = useState("#ffff00")
-    const [vBaseColor, setVBaseColor] = useState("#00ff00")
+    const [uBaseColor, setUBaseColor] = useState("#ff0000")
+    const [vBaseColor, setVBaseColor] = useState("#0000ff")
+    const [velocityColor, setVelocityColor] = useState("#00ff00")
 
     const [showVelocity, setShowVelocity] = useState(true)
     const [showBases, setShowBases] = useState(true)
 
-    const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
-    const getCurvePoints = useCallback(() =>
-        setCurvePoints(solveGeodesic(parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLengthNumber)),
-    [parametricSurface, startUNumber, startVNumber, uVelNumber, vVelNumber, stepNumber, nStepsNumber, maxLength])
+    const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
+    const [startV, startVNumber, setStartV] = useStringNumber(0)
+    const [u, setU] = useState(startUNumber)
+    const [v, setV] = useState(startVNumber)
 
-    const clearCurve = useCallback(() => {
+    const [startUVel, startUVelNumber, setStartUVel] = useStringNumber(0)
+    const [startVVel, startVVelNumber, setStartVVel] = useStringNumber(1)
+    const [uVel, setUVel] = useState(startUVelNumber)
+    const [vVel, setVVel] = useState(startVVelNumber)
+
+    const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
+
+    const [playing, setPlaying] = useState(false)
+
+    const reset = useCallback(() => {
+        setPlaying(false)
+        playingRef.current = false
         setCurvePoints([])
+
+        setU(startUNumber)
+        setV(startVNumber)
+        currentU.current = startUNumber
+        currentV.current = startVNumber
+
+        setUVel(startUVelNumber)
+        setVVel(startVVelNumber)
+        currentUVel.current = startUVelNumber
+        currentVVel.current = startVVelNumber
+    }, [startUNumber, startVNumber, startUVel, startVVel])
+
+    useEffect(() => {
+        if (!playing) {
+            reset()
+        }
+    }, [playing, reset])
+
+    useEffect(() => {
+        reset()
+    }, [xFnPrepared, yFnPrepared, zFnPrepared, reset])
+
+    const animationFrame = useRef<number>()
+    const playingRef = useRef(false)
+    const parametricSurfaceRef = useRef<ParametricSurfaceFn>()
+    const currentU = useRef(startUNumber)
+    const currentV = useRef(startVNumber)
+    const currentUVel = useRef(startUVelNumber)
+    const currentVVel = useRef(startVVelNumber)
+    const prevTimestamp = useRef<number>()
+    const stepsPerFrame = useRef(1)
+
+    const step = useCallback((timestamp: number) => {
+        if (!prevTimestamp.current || !playingRef.current || parametricSurfaceRef.current === undefined) {
+            prevTimestamp.current = timestamp
+            animationFrame.current = requestAnimationFrame(step)
+            return
+        }
+
+        const steps = stepsPerFrame.current
+        const dt = (timestamp - prevTimestamp.current) / 1000 / steps
+        let newU = currentU.current
+        let newV = currentV.current
+        let newUVel = currentUVel.current
+        let newVVel = currentVVel.current
+        for (let i = 0; i < steps; i++) {
+            [[newU, newV], [newUVel, newVVel]] = geodesicStep(parametricSurfaceRef.current, newU, newV, newUVel, newVVel, dt)
+        }
+
+        setU(newU)
+        setV(newV)
+        setUVel(newUVel)
+        setVVel(newVVel)
+
+        currentU.current = newU
+        currentV.current = newV
+        currentUVel.current = newUVel
+        currentVVel.current = newVVel
+
+        setCurvePoints(prev => [...prev, [newU, newV]])
+
+        prevTimestamp.current = timestamp
+        animationFrame.current = requestAnimationFrame(step)
     }, [])
 
     useEffect(() => {
-        clearCurve()
-    }, [xFn, yFn, zFn])
+        animationFrame.current = requestAnimationFrame(step)
+        return () => cancelAnimationFrame(animationFrame.current!)
+    }, [])
     
     const [view, setView] = useState<"intrinsic" | "extrinsic">("extrinsic")
     const bbox: [number, number, number, number] = useMemo(() => {
@@ -306,8 +219,8 @@ export default function App() {
             centerY + size / 2 + marginSize,
             centerX + size / 2 + marginSize,
             centerY - size / 2 - marginSize,
-        ]
-    }, [maxUNumber, minUNumber, maxVNumber, minVNumber, view])
+        ] as [number, number, number, number]
+    }, [maxUNumber, minUNumber, maxVNumber, minVNumber])
 
     const camPosRef = useRef(new Vector3())
     const targetRef = useRef(new Vector3())
@@ -320,10 +233,10 @@ export default function App() {
                     <Canvas camera={{position: [0, 10, 10]}}>
                         <ThreeScene
                             parametricSurface={parametricSurface}
-                            startU={startUNumber}
-                            startV={startVNumber}
-                            uVel={uVelNumber}
-                            vVel={vVelNumber}
+                            startU={u}
+                            startV={v}
+                            uVel={uVel}
+                            vVel={vVel}
                             minU={minUNumber}
                             maxU={maxUNumber}
                             minV={minVNumber}
@@ -357,16 +270,17 @@ export default function App() {
                         </Canvas>
                     </div>
                 </> : <CustomJXGBoard className="w-full h-full" id="intrinsic-view" bbox={bbox} initFn={board => {
-                    const point = board.create("point", [startUNumber, startVNumber], {
-                        name: "",
-                        color: pointColor,
-                    })
-                    board.create("arrow", [point, [startUNumber + uVelNumber, startVNumber + vVelNumber]], {
+                    board.create("arrow", [[u, v], [u + uVel, v + vVel]], {
                         color: velocityColor,
                     })
 
                     board.create("curve", [curvePoints.map(([u]) => u), curvePoints.map(([_, v]) => v)], {
                         strokeColor: pathColor,
+                    })
+
+                    board.create("point", [u, v], {
+                        name: "",
+                        color: pointColor,
                     })
                 }}/>}
 
@@ -382,14 +296,14 @@ export default function App() {
                                 {k}: <input value={v} onChange={e => setParameters(prev => ({
                                     ...prev,
                                     [k]: +e.target.value,
-                                }))} type="text" />
+                                }))} type="number" />
                             </label>
                         )}
 
-                        <label className="flex items-center gap-2">u minimum: <input value={minU} onChange={e => setMinU(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="text" /></label>
+                        <label className="flex items-center gap-2">u minimum: <input value={minU} onChange={e => setMinU(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" /></label>
                     </div>
 
                     <p className="p-1 font-bold text-center">Presets</p>
@@ -401,16 +315,15 @@ export default function App() {
 
                     <p className="p-1 font-bold text-center">Path</p>
                     <div className="flex flex-col gap-2 p-2">
-                        <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">velocity u: <input value={uVel} onChange={e => setUVel(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">velocity v: <input value={vVel} onChange={e => setVVel(e.target.value)} type="text" /></label>
-
-                        <p className="p-1 font-bold text-center">Integration Parameters</p>
-                        <label className="flex items-center gap-2">step: <input value={step} onChange={e => setStep(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">n steps: <input value={nSteps} onChange={e => setNSteps(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">max length: <input value={maxLength} onChange={e => setMaxLength(e.target.value)} type="text" /></label>
-                        <button onClick={getCurvePoints}>Solve Geodesic</button>
+                        <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">velocity u: <input value={startUVel} onChange={e => setStartUVel(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">velocity v: <input value={startVVel} onChange={e => setStartVVel(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">steps per frame: <input onChange={e => stepsPerFrame.current = +e.target.value} type="number" defaultValue={1} /></label>
+                        <button onClick={() => {
+                            setPlaying(prev => !prev)
+                            playingRef.current = !playingRef.current
+                        }}>{playing ? "Stop" : "Play"}</button>
                     </div>
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>

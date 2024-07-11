@@ -12,20 +12,28 @@ export type Range = [number, number]
 // ^ is used for exponentiation
 // %pi and %e are reserved
 
-export function runFunction(
+export function prepareFunction(
     textFn: string,
     parametersMap: ParametersObj,
-    u: number,
-    v: number,
-): number {
+): string {
     let result = textFn
     result = result.replace(/\b(sin|cos|tan|acos|asin|atan|sinh|cosh|tanh|asinh|acosh|atanh|sqrt)\b/g, "Math.$1")
     result = result.replace(/%pi/g, Math.PI.toString())
     result = result.replace(/%e/g, Math.E.toString())
-    result = result.replace(/%u/g, `(${u})`)
-    result = result.replace(/%v/g, `(${v})`)
     result = result.replace(/\^/g, "**")
     result = result.replace(/%([a-tw-zA-Z])/g, (_, p1) => `(${parametersMap[p1] ?? "NaN"})`)
+
+    return result
+}
+
+export function runFunction(
+    textFn: string,
+    u: number,
+    v: number,
+): number {
+    let result = textFn
+    result = result.replace(/%u/g, `(${u})`)
+    result = result.replace(/%v/g, `(${v})`)
 
     return eval(result)
 }
