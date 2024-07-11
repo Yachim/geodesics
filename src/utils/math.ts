@@ -148,18 +148,69 @@ function christoffelSymbolsSecondKind(surface: ParametricSurfaceFn, u: number, v
     ]
 }
 
-export function geodesicStep(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number): [
+// returns accelerations
+function geodesicEquation(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number): [number, number] {
+        const css = christoffelSymbolsSecondKind(surface, u, v);
+
+        const duVelDt = -(css[0][0][0] * uVel * uVel + 2 * css[0][0][1] * uVel * vVel + css[0][1][1] * vVel * vVel);
+        const dvVelDt = -(css[1][0][0] * uVel * uVel + 2 * css[1][0][1] * uVel * vVel + css[1][1][1] * vVel * vVel);
+
+        return [duVelDt, dvVelDt];
+    }
+
+export function geodesicEulerStep(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number): [
     [number, number],
     [number, number],
 ] {
-    const css = christoffelSymbolsSecondKind(surface, u, v)
     const newU = u + uVel * dt
     const newV = v + vVel * dt
-    const newUVel = uVel - (css[0][0][0] * (uVel ** 2) + 2 * css[0][0][1] * uVel * vVel + css[0][1][1] * (vVel ** 2)) * dt
-    const newVVel = vVel - (css[1][0][0] * (uVel ** 2) + 2 * css[1][0][1] * uVel * vVel + css[1][1][1] * (vVel ** 2)) * dt
+
+    const [uAcc, vAcc] = geodesicEquation(surface, u, v, uVel, vVel)
+    const newUVel = uVel + uAcc * dt
+    const newVVel = vVel + vAcc * dt
 
     return [
         [newU, newV],
         [newUVel, newVVel],
     ]
+}
+
+export function geodesicRK4Step(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number): [
+    [number, number],
+    [number, number],
+] {
+    const k1 = [uVel, vVel]
+    const l1 = geodesicEquation(surface, u, v, uVel, vVel);
+
+    const k2 = [uVel + 0.5 * dt * l1[0], vVel + 0.5 * dt * l1[1]]
+    const l2 = geodesicEquation(surface, u + 0.5 * dt * k1[0], v + 0.5 * dt * k1[1], uVel + 0.5 * dt * l1[0], vVel + 0.5 * dt * l1[1])
+
+    const k3 = [uVel + 0.5 * dt * l2[0], vVel + 0.5 * dt * l2[1]]
+    const l3 = geodesicEquation(surface, u + 0.5 * dt * k2[0], v + 0.5 * dt * k2[1], uVel + 0.5 * dt * l2[0], vVel + 0.5 * dt * l2[1])
+
+    const k4 = [uVel + dt * l3[0], vVel + dt * l3[1]]
+    const l4 = geodesicEquation(surface, u + dt * k3[0], v + dt * k3[1], uVel + dt * l3[0], vVel + dt * l3[1])
+
+    const newU = u + dt / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0])
+    const newV = v + dt / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1])
+    const newUVel = uVel + dt / 6 * (l1[0] + 2 * l2[0] + 2 * l3[0] + l4[0])
+    const newVVel = vVel + dt / 6 * (l1[1] + 2 * l2[1] + 2 * l3[1] + l4[1])
+
+    return [
+        [newU, newV],
+        [newUVel, newVVel],
+    ];
+}
+
+export type Solver = "rk" | "euler"
+export function geodesicStep(surface: ParametricSurfaceFn, u: number, v: number, uVel: number, vVel: number, dt: number, solver: Solver): [
+    [number, number],
+    [number, number],
+] {
+    if (solver === "rk") {
+        return geodesicRK4Step(surface, u, v, uVel, vVel, dt)
+    }
+    else {
+        return geodesicEulerStep(surface, u, v, uVel, vVel, dt)
+    }
 }

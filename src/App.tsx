@@ -3,7 +3,7 @@ import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { findParameters, ParametersObj, ParametricSurfaceFn, prepareFunction, Preset, presetList, presets, runFunction } from "./utils/functions"
 import { Vector3 } from "three"
 import { useStringNumber } from "./utils/stringNumber"
-import { geodesicStep } from "./utils/math"
+import { geodesicStep, Solver } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { CustomJXGBoard } from "./components/JXGBoard"
 import { ThreeScene } from "./components/ThreeScene"
@@ -163,6 +163,7 @@ export default function App() {
     const currentVVel = useRef(startVVelNumber)
     const prevTimestamp = useRef<number>()
     const stepsPerFrame = useRef(1)
+    const solver = useRef<Solver>("rk")
 
     const step = useCallback((timestamp: number) => {
         if (!prevTimestamp.current || !playingRef.current || parametricSurfaceRef.current === undefined) {
@@ -178,7 +179,7 @@ export default function App() {
         let newUVel = currentUVel.current
         let newVVel = currentVVel.current
         for (let i = 0; i < steps; i++) {
-            [[newU, newV], [newUVel, newVVel]] = geodesicStep(parametricSurfaceRef.current, newU, newV, newUVel, newVVel, dt)
+            [[newU, newV], [newUVel, newVVel]] = geodesicStep(parametricSurfaceRef.current, newU, newV, newUVel, newVVel, dt, solver.current)
         }
 
         setU(newU)
@@ -320,6 +321,10 @@ export default function App() {
                         <label className="flex items-center gap-2">velocity u: <input value={startUVel} onChange={e => setStartUVel(e.target.value)} type="number" /></label>
                         <label className="flex items-center gap-2">velocity v: <input value={startVVel} onChange={e => setStartVVel(e.target.value)} type="number" /></label>
                         <label className="flex items-center gap-2">steps per frame: <input onChange={e => stepsPerFrame.current = +e.target.value} type="number" defaultValue={1} /></label>
+                        <label className="flex items-center gap-2">solver: <select onChange={e => solver.current = e.target.value as Solver}>
+                            <option value="rk">Runge-Kutta</option>
+                            <option value="euler">Euler</option>
+                        </select></label>
                         <button onClick={() => {
                             setPlaying(prev => !prev)
                             playingRef.current = !playingRef.current
