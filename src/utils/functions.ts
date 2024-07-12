@@ -109,7 +109,7 @@ export const presets: {
         uRange: [-10, 10],
         vRange: [-10, 10],
         parameters: {
-            y: 0,
+            y: 0.01,
         },
     },
     cone: {
