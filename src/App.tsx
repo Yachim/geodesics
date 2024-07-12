@@ -35,6 +35,7 @@ function AxesScene({
     )
 }
 
+type State = "playing" | "paused" | "stopped"
 export default function App() {
     const [minU, minUNumber, setMinU] = useStringNumber(0)
     const [maxU, maxUNumber, setMaxU] = useStringNumber(1)
@@ -126,11 +127,11 @@ export default function App() {
 
     const [curvePoints, setCurvePoints] = useState<[number, number][]>([])
 
-    const [playing, setPlaying] = useState(false)
+    const [state, setState] = useState<State>("stopped")
 
     const reset = useCallback(() => {
-        setPlaying(false)
-        playingRef.current = false
+        setState("stopped")
+        stateRef.current = "stopped"
         setCurvePoints([])
 
         setU(startUNumber)
@@ -145,17 +146,17 @@ export default function App() {
     }, [startUNumber, startVNumber, startUVel, startVVel])
 
     useEffect(() => {
-        if (!playing) {
+        if (state === "stopped") {
             reset()
         }
-    }, [playing, reset])
+    }, [state, reset])
 
     useEffect(() => {
         reset()
     }, [xFnPrepared, yFnPrepared, zFnPrepared, reset])
 
     const animationFrame = useRef<number>()
-    const playingRef = useRef(false)
+    const stateRef = useRef<State>("stopped")
     const parametricSurfaceRef = useRef<ParametricSurfaceFn>()
     const currentU = useRef(startUNumber)
     const currentV = useRef(startVNumber)
@@ -166,7 +167,7 @@ export default function App() {
     const solver = useRef<Solver>("rk")
 
     const step = useCallback((timestamp: number) => {
-        if (!prevTimestamp.current || !playingRef.current || parametricSurfaceRef.current === undefined) {
+        if (!prevTimestamp.current || stateRef.current !== "playing" || parametricSurfaceRef.current === undefined) {
             prevTimestamp.current = timestamp
             animationFrame.current = requestAnimationFrame(step)
             return
@@ -325,10 +326,24 @@ export default function App() {
                             <option value="rk">Runge-Kutta</option>
                             <option value="euler">Euler</option>
                         </select></label>
-                        <button onClick={() => {
-                            setPlaying(prev => !prev)
-                            playingRef.current = !playingRef.current
-                        }}>{playing ? "Stop" : "Play"}</button>
+                        {state === "playing" || state === "paused" ?
+                            <>
+                                <button onClick={() => {
+                                    const newValue = state === "playing" ? "paused" : "playing"
+                                    setState(newValue)
+                                    stateRef.current = newValue
+                                }}>{state === "playing" ? "Pause" : "Play"}</button>
+                                <button onClick={() => {
+                                    setState("stopped")
+                                    stateRef.current = "stopped"
+                                }}>Stop</button>
+                            </>
+                        :
+                            <button onClick={() => {
+                                setState("playing")
+                                stateRef.current = "playing"
+                            }}>Play</button>
+                        }
                     </div>
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>
