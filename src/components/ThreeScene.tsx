@@ -1,4 +1,3 @@
-import { useSpring, easings, animated } from "@react-spring/three"
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
 import { MutableRefObject, useMemo, useRef, useEffect } from "react"
@@ -84,30 +83,6 @@ export function ThreeScene({
     const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
 
-    const {
-        currentSurfaceColor,
-        currentSurfaceOpacity,
-        currentPlaneColor,
-        currentPlaneOpacity,
-        currentPointColor,
-        currentPointOpacity,
-        currentPathColor,
-        currentPathOpacity,
-    } = useSpring({
-        currentSurfaceColor: surfaceColor,
-        currentSurfaceOpacity: surfaceOpacity,
-        currentPlaneColor: planeColor,
-        currentPlaneOpacity: planeOpacity,
-        currentPointColor: pointColor,
-        currentPointOpacity: pointOpacity,
-        currentPathColor: pathColor,
-        currentPathOpacity: pathOpacity,
-        config: {
-            duration: 500,
-            easings: easings.easeInCubic,
-        },
-    })
-
     const orbitControlsRef = useRef(null)
 
     useFrame(({camera}) => {
@@ -126,17 +101,18 @@ export function ThreeScene({
             <ambientLight intensity={Math.PI / 2} />
             <spotLight position={[30, 30, 30]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
             <pointLight position={[-30, -30, -30]} decay={0} intensity={Math.PI} />
+
+            <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+                <meshStandardMaterial color={planeColor} visible={planeOpacity !== 0} side={DoubleSide} transparent opacity={planeOpacity} />
+            </Plane>
             <mesh geometry={new ParametricGeometry((u, v, target) => {
                 const out = parametricSurface(minU + u * (maxU - minU), minV + v * (maxV - minV))
                 target.x = out.x
                 target.y = out.y
                 target.z = out.z
             }, 25, 25)}>
-                <animated.meshStandardMaterial color={currentSurfaceColor} visible={currentSurfaceOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentSurfaceOpacity} />
+                <meshStandardMaterial color={surfaceColor} visible={surfaceOpacity !== 0} side={DoubleSide} transparent opacity={surfaceOpacity} />
             </mesh>
-            <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                <animated.meshStandardMaterial color={currentPlaneColor} visible={currentPlaneOpacity.to(val => val !== 0)} side={DoubleSide} transparent opacity={currentPlaneOpacity} />
-            </Plane>
 
             {showBases &&
                 <>
@@ -153,12 +129,12 @@ export function ThreeScene({
             }
 
             <Sphere args={[0.2, 20, 20]} position={startPos}>
-                <animated.meshStandardMaterial color={currentPointColor} visible={currentPointOpacity.to(val => val !== 0)} transparent opacity={currentPointOpacity} />
+                <meshStandardMaterial color={pointColor} visible={pointOpacity !== 0} transparent opacity={pointOpacity} />
             </Sphere>
 
             <line>
                 <bufferGeometry ref={lineRef} />
-                <animated.lineBasicMaterial color={currentPathColor} side={DoubleSide} visible={currentPathOpacity.to(val => val !== 0)} transparent opacity={currentPathOpacity} />
+                <lineBasicMaterial color={pathColor} side={DoubleSide} visible={pathOpacity !== 0} transparent opacity={pathOpacity} />
             </line>
         </>
     )
