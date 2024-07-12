@@ -97,16 +97,14 @@ export default function App() {
     }, [parametricSurface])
 
     const [surfaceColor, setSurfaceColor] = useState("#aaaaaa")
-    const [surfaceOpacity, surfaceOpacityNumber, setSurfaceOpacity] = useStringNumber(1)
 
     const [planeColor, setPlaneColor] = useState("#6fc0d8")
     const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.4)
 
     const [pointColor, setPointColor] = useState("#00ff00")
-    const [pointOpacity, pointOpacityNumber, setPointOpacity] = useStringNumber(1)
+    const [pointSize, pointSizeNumber, setPointSize] = useStringNumber(0.15)
 
     const [pathColor, setPathColor] = useState("#000000")
-    const [pathOpacity, pathOpacityNumber, setPathOpacity] = useStringNumber(1)
 
     const [uBaseColor, setUBaseColor] = useState("#ff0000")
     const [vBaseColor, setVBaseColor] = useState("#0000ff")
@@ -243,13 +241,11 @@ export default function App() {
                             minV={minVNumber}
                             maxV={maxVNumber}
                             surfaceColor={surfaceColor}
-                            surfaceOpacity={surfaceOpacityNumber}
                             planeColor={planeColor}
                             planeOpacity={planeOpacityNumber}
                             pointColor={pointColor}
-                            pointOpacity={pointOpacityNumber}
+                            pointSize={pointSizeNumber}
                             pathColor={pathColor}
-                            pathOpacity={pathOpacityNumber}
                             velocityColor={velocityColor}
                             showVelocity={showVelocity}
                             uBaseColor={uBaseColor}
@@ -280,9 +276,7 @@ export default function App() {
                     velocityColor={velocityColor}
                     velocityVisible={showVelocity}
                     pathColor={pathColor}
-                    pathOpacity={pathOpacityNumber}
                     pointColor={pointColor}
-                    pointOpacity={pointOpacityNumber}
                     curvePoints={curvePoints}
                 />}
 
@@ -349,16 +343,14 @@ export default function App() {
                     <p className="p-1 font-bold text-center">Cosmetic</p>
                     <div className="flex flex-col gap-2 p-2">
                         <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">surface opacity: <input value={surfaceOpacity} onChange={e => setSurfaceOpacity(e.target.value)} type="number" /></label>
 
                         <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
 
                         <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">point opacity: <input value={pointOpacity} onChange={e => setPointOpacity(e.target.value)} type="number" /></label>
+                        <label className="flex items-center gap-2">point size: <input value={pointSize} onChange={e => setPointSize(e.target.value)} type="number" /></label>
 
                         <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">path opacity: <input value={pathOpacity} onChange={e => setPathOpacity(e.target.value)} type="number" /></label>
 
                         <label className="flex items-center gap-2">velocity color: <input value={velocityColor} onChange={e => setVelocityColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">show velocity: <input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" /></label>

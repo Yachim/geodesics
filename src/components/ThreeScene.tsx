@@ -17,13 +17,11 @@ export function ThreeScene({
     minV,
     maxV,
     surfaceColor,
-    surfaceOpacity,
     planeColor,
     planeOpacity,
     pointColor,
-    pointOpacity,
+    pointSize,
     pathColor,
-    pathOpacity,
     velocityColor,
     uBaseColor,
     vBaseColor,
@@ -43,13 +41,11 @@ export function ThreeScene({
     minV: number
     maxV: number
     surfaceColor: string
-    surfaceOpacity: number
     planeColor: string
     planeOpacity: number
     pointColor: string
-    pointOpacity: number
+    pointSize: number
     pathColor: string
-    pathOpacity: number
     velocityColor: string
     uBaseColor: string
     vBaseColor: string
@@ -102,16 +98,16 @@ export function ThreeScene({
             <spotLight position={[30, 30, 30]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
             <pointLight position={[-30, -30, -30]} decay={0} intensity={Math.PI} />
 
-            <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+            <Plane renderOrder={1} args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
                 <meshStandardMaterial color={planeColor} visible={planeOpacity !== 0} side={DoubleSide} transparent opacity={planeOpacity} />
             </Plane>
-            <mesh geometry={new ParametricGeometry((u, v, target) => {
+            <mesh renderOrder={0} geometry={new ParametricGeometry((u, v, target) => {
                 const out = parametricSurface(minU + u * (maxU - minU), minV + v * (maxV - minV))
                 target.x = out.x
                 target.y = out.y
                 target.z = out.z
             }, 25, 25)}>
-                <meshStandardMaterial color={surfaceColor} visible={surfaceOpacity !== 0} side={DoubleSide} transparent opacity={surfaceOpacity} />
+                <meshStandardMaterial color={surfaceColor} side={DoubleSide} />
             </mesh>
 
             {showBases &&
@@ -128,13 +124,13 @@ export function ThreeScene({
                 <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
             }
 
-            <Sphere args={[0.2, 20, 20]} position={startPos}>
-                <meshStandardMaterial color={pointColor} visible={pointOpacity !== 0} transparent opacity={pointOpacity} />
+            <Sphere args={[pointSize, 20, 20]} position={startPos}>
+                <meshStandardMaterial color={pointColor} />
             </Sphere>
 
             <line>
                 <bufferGeometry ref={lineRef} />
-                <lineBasicMaterial color={pathColor} side={DoubleSide} visible={pathOpacity !== 0} transparent opacity={pathOpacity} />
+                <lineBasicMaterial color={pathColor} side={DoubleSide} />
             </line>
         </>
     )

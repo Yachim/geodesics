@@ -11,9 +11,7 @@ export const CustomJXGBoard = forwardRef(({
     velocityColor,
     velocityVisible,
     pathColor,
-    pathOpacity,
     pointColor,
-    pointOpacity,
     curvePoints,
 }: {
     bbox: [number, number, number, number]
@@ -25,9 +23,7 @@ export const CustomJXGBoard = forwardRef(({
     velocityColor: string
     velocityVisible: boolean
     pathColor: string
-    pathOpacity: number
     pointColor: string
-    pointOpacity: number
     curvePoints: [number, number][]
 }, ref: Ref<HTMLDivElement>) => {
     const boardRef = useRef<JXG.Board>()
@@ -51,14 +47,12 @@ export const CustomJXGBoard = forwardRef(({
         board.create("curve", [[u], [v]], {
             id: "curve",
             strokeColor: pathColor,
-            opacity: pathOpacity,
         })
 
         const point: JXG.Point = board.create("point", [u, v], {
             name: "",
             id: "point",
             color: pointColor,
-            opacity: pointOpacity,
         })
 
         arrow.point1 = point
@@ -107,17 +101,15 @@ export const CustomJXGBoard = forwardRef(({
 
         point.setAttribute({
             color: pointColor,
-            opacity: pointOpacity,
         })
         curve.setAttribute({
             strokeColor: pathColor,
-            opacity: pathOpacity,
         })
         arrow.setAttribute({
             color: velocityColor,
             visible: velocityVisible,
         })
-    })
+    }, [pointColor, pathColor, velocityColor, velocityVisible])
 
     return (
         <div ref={ref} className={`w-full ${className}`} id="intrinsic-view" />
