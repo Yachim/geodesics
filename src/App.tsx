@@ -96,7 +96,10 @@ export default function App() {
         parametricSurfaceRef.current = parametricSurface
     }, [parametricSurface])
 
-    const [surfaceColor, setSurfaceColor] = useState("#aaaaaa")
+    const [surfaceColor, setSurfaceColor] = useState("#7c9946") // grass
+    // const [surfaceColor, setSurfaceColor] = useState("#edc9af") // sand
+    // const [surfaceColor, setSurfaceColor] = useState("#836539") // dirt
+    // const [surfaceColor, setSurfaceColor] = useState("#1ca3ec") // water?
 
     const [planeColor, setPlaneColor] = useState("#6fc0d8")
     const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.4)
@@ -240,6 +243,8 @@ export default function App() {
                             maxU={maxUNumber}
                             minV={minVNumber}
                             maxV={maxVNumber}
+                            lightColor={"#fcd14d"}
+                            ambientLightColor={"#ffffff"}
                             surfaceColor={surfaceColor}
                             planeColor={planeColor}
                             planeOpacity={planeOpacityNumber}
