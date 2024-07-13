@@ -96,6 +96,10 @@ export default function App() {
         parametricSurfaceRef.current = parametricSurface
     }, [parametricSurface])
 
+    const [bgColor, setBgColor] = useState("#dcdfe3")
+    const [dirLightColor, setDirLightColor] = useState("#fcd14d")
+    const [ambientLightColor, setAmbientLightColor] = useState("#ffffff")
+
     const [surfaceColor, setSurfaceColor] = useState("#7c9946") // grass
     // const [surfaceColor, setSurfaceColor] = useState("#edc9af") // sand
     // const [surfaceColor, setSurfaceColor] = useState("#836539") // dirt
@@ -243,8 +247,9 @@ export default function App() {
                             maxU={maxUNumber}
                             minV={minVNumber}
                             maxV={maxVNumber}
-                            lightColor={"#fcd14d"}
-                            ambientLightColor={"#ffffff"}
+                            bgColor={bgColor}
+                            dirLightColor={dirLightColor}
+                            ambientLightColor={ambientLightColor}
                             surfaceColor={surfaceColor}
                             planeColor={planeColor}
                             planeOpacity={planeOpacityNumber}
@@ -259,6 +264,7 @@ export default function App() {
                             curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                             camPosRef={camPosRef}
                             targetRef={targetRef}
+                            playing={state === "playing"}
                         />
                     </Canvas>
                     <div className="absolute left-0 bottom-0 w-[150px] h-[150px]">
@@ -347,6 +353,9 @@ export default function App() {
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>
                     <div className="flex flex-col gap-2 p-2">
+                        <label className="flex items-center gap-2">background color: <input value={bgColor} onChange={e => setBgColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">directinal light color: <input value={dirLightColor} onChange={e => setDirLightColor(e.target.value)} type="color" /></label>
+                        <label className="flex items-center gap-2">ambient light color: <input value={ambientLightColor} onChange={e => setAmbientLightColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
 
                         <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>

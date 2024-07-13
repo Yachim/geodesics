@@ -1,10 +1,11 @@
 import { OrbitControls, Plane, Sphere } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
-import { MutableRefObject, useMemo, useRef, useEffect } from "react"
+import { MutableRefObject, useMemo, useRef, useEffect, } from "react"
 import { Vector3, BufferGeometry, DoubleSide, Color, ShaderMaterial } from "three"
 import { OrbitControls as OrbitControlsType, ParametricGeometry } from "three/examples/jsm/Addons.js"
 import { ParametricSurfaceFn } from "../utils/functions"
 import { uBase, vBase } from "../utils/math"
+import { Dust } from "./Dust"
 
 const dirLightPos = new Vector3(20, 30, 20)
 
@@ -126,8 +127,9 @@ export function ThreeScene({
     maxU,
     minV,
     maxV,
+    bgColor,
     ambientLightColor,
-    lightColor,
+    dirLightColor,
     surfaceColor,
     planeColor,
     planeOpacity,
@@ -142,6 +144,7 @@ export function ThreeScene({
     curvePoints,
     targetRef,
     camPosRef,
+    playing,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -152,8 +155,9 @@ export function ThreeScene({
     maxU: number
     minV: number
     maxV: number
+    bgColor: string
     ambientLightColor: string
-    lightColor: string
+    dirLightColor: string
     surfaceColor: string
     planeColor: string
     planeOpacity: number
@@ -168,6 +172,7 @@ export function ThreeScene({
     curvePoints: Vector3[]
     targetRef: MutableRefObject<Vector3>
     camPosRef: MutableRefObject<Vector3>
+    playing: boolean
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
@@ -206,7 +211,7 @@ export function ThreeScene({
 
     const uniforms = useMemo(() => ({
         uDirectionalLightPosition: { value: dirLightPos },
-        uDirectionalLightColor: { value: new Color(lightColor) },
+        uDirectionalLightColor: { value: new Color(dirLightColor) },
         uAmbientLightColor: { value: new Color(ambientLightColor) },
         uTextureColor: {value: new Color(surfaceColor) },
     }), [])
@@ -219,17 +224,29 @@ export function ThreeScene({
             return
         }
 
-        current.uniforms.uDirectionalLightColor.value.set(lightColor)
+        current.uniforms.uDirectionalLightColor.value.set(dirLightColor)
         current.uniforms.uAmbientLightColor.value.set(ambientLightColor)
         current.uniforms.uTextureColor.value.set(surfaceColor)
-    }, [lightColor, ambientLightColor, surfaceColor])
+    }, [dirLightColor, ambientLightColor, surfaceColor])
 
     return (
         <>
             <OrbitControls ref={orbitControlsRef} />
+            <color attach="background" args={[bgColor]} />
 
             <ambientLight intensity={Math.PI / 2} color={ambientLightColor} />
-            <directionalLight position={dirLightPos} color={lightColor} />
+            <directionalLight position={dirLightPos} color={dirLightColor} />
+
+            <Dust
+                originPos={startPos}
+                color={surfaceColor}            
+                direction={velocityNormalized.clone().multiplyScalar(-1)}
+                velocity={velocity.length()}
+                normal={partialU.clone().cross(partialV).normalize()}
+                density={10}
+                nParticles={500}
+                playing={playing}
+            />
 
             <Plane renderOrder={1} args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
                 <meshToonMaterial color={planeColor} visible={planeOpacity !== 0} side={DoubleSide} transparent opacity={planeOpacity} />
@@ -240,9 +257,6 @@ export function ThreeScene({
                 target.y = out.y
                 target.z = out.z
             }, 25, 25)}>
-                {false ? 
-                <meshToonMaterial color={surfaceColor} side={DoubleSide} />
-                :
                 <shaderMaterial 
                     ref={shaderRef}
                     uniforms={uniforms}
@@ -250,7 +264,6 @@ export function ThreeScene({
                     vertexShader={vertexShader}
                     side={DoubleSide}
                 />
-                }
             </mesh>
 
             {showBases &&
