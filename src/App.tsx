@@ -96,25 +96,11 @@ export default function App() {
         parametricSurfaceRef.current = parametricSurface
     }, [parametricSurface])
 
-    const [bgColor, setBgColor] = useState("#dcdfe3")
-    const [dirLightColor, setDirLightColor] = useState("#fcd14d")
-    const [ambientLightColor, setAmbientLightColor] = useState("#ffffff")
-
-    const [surfaceColor, setSurfaceColor] = useState("#7c9946") // grass
-    // const [surfaceColor, setSurfaceColor] = useState("#edc9af") // sand
-    // const [surfaceColor, setSurfaceColor] = useState("#836539") // dirt
-    // const [surfaceColor, setSurfaceColor] = useState("#1ca3ec") // water?
-
-    const [planeColor, setPlaneColor] = useState("#6fc0d8")
     const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.4)
 
-    const [pointColor, setPointColor] = useState("#00ff00")
     const [pointSize, pointSizeNumber, setPointSize] = useStringNumber(0.1)
 
-    const [uBaseColor, setUBaseColor] = useState("#ff0000")
-    const [vBaseColor, setVBaseColor] = useState("#0000ff")
-    const [velocityColor, setVelocityColor] = useState("#00ff00")
-
+    const [showParticles, setShowParticles] = useState(true)
     const [showVelocity, setShowVelocity] = useState(true)
     const [showBases, setShowBases] = useState(true)
 
@@ -245,19 +231,11 @@ export default function App() {
                             maxU={maxUNumber}
                             minV={minVNumber}
                             maxV={maxVNumber}
-                            bgColor={bgColor}
-                            dirLightColor={dirLightColor}
-                            ambientLightColor={ambientLightColor}
-                            surfaceColor={surfaceColor}
-                            planeColor={planeColor}
                             planeOpacity={planeOpacityNumber}
-                            pointColor={pointColor}
                             pointSize={pointSizeNumber}
-                            velocityColor={velocityColor}
                             showVelocity={showVelocity}
-                            uBaseColor={uBaseColor}
-                            vBaseColor={vBaseColor}
                             showBases={showBases}
+                            showParticles={showParticles}
                             curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
                             camPosRef={camPosRef}
                             targetRef={targetRef}
@@ -281,9 +259,7 @@ export default function App() {
                     v={v}
                     uVel={uVel}
                     vVel={vVel}
-                    velocityColor={velocityColor}
                     velocityVisible={showVelocity}
-                    pointColor={pointColor}
                     curvePoints={curvePoints}
                 />}
 
@@ -349,23 +325,13 @@ export default function App() {
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>
                     <div className="flex flex-col gap-2 p-2">
-                        <label className="flex items-center gap-2">background color: <input value={bgColor} onChange={e => setBgColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">directinal light color: <input value={dirLightColor} onChange={e => setDirLightColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">ambient light color: <input value={ambientLightColor} onChange={e => setAmbientLightColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">surface color: <input value={surfaceColor} onChange={e => setSurfaceColor(e.target.value)} type="color" /></label>
-
-                        <label className="flex items-center gap-2">plane color: <input value={planeColor} onChange={e => setPlaneColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
 
-                        <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">point size: <input value={pointSize} onChange={e => setPointSize(e.target.value)} type="number" /></label>
 
-                        <label className="flex items-center gap-2">velocity color: <input value={velocityColor} onChange={e => setVelocityColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">show velocity: <input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" /></label>
-
-                        <label className="flex items-center gap-2">u base color: <input value={uBaseColor} onChange={e => setUBaseColor(e.target.value)} type="color" /></label>
-                        <label className="flex items-center gap-2">v base color: <input value={vBaseColor} onChange={e => setVBaseColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">show bases: <input checked={showBases} onChange={e => setShowBases(e.target.checked)} type="checkbox" /></label>
+                        <label className="flex items-center gap-2">show particles: <input checked={showParticles} onChange={e => setShowParticles(e.target.checked)} type="checkbox" /></label>
                     </div>
                 </div>
             </div>
