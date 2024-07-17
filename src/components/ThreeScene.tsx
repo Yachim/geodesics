@@ -1,7 +1,7 @@
-import { OrbitControls, Plane, Sphere } from "@react-three/drei"
+import { OrbitControls, Plane, useGLTF } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
 import { MutableRefObject, useMemo, useRef, useEffect, } from "react"
-import { Vector3, BufferGeometry, DoubleSide, Color, ShaderMaterial } from "three"
+import { Vector3, BufferGeometry, DoubleSide, Color, ShaderMaterial, Quaternion, Euler } from "three"
 import { OrbitControls as OrbitControlsType, ParametricGeometry } from "three/examples/jsm/Addons.js"
 import { ParametricSurfaceFn } from "../utils/functions"
 import { uBase, vBase } from "../utils/math"
@@ -133,7 +133,7 @@ export function ThreeScene({
     surfaceColor,
     planeColor,
     planeOpacity,
-    pointColor,
+    // pointColor,
     pointSize,
     pathColor,
     velocityColor,
@@ -190,6 +190,8 @@ export function ThreeScene({
     const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
     const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
 
+    const normal = useMemo(() => partialU.clone().cross(partialV).normalize(), [partialU, partialV])
+
     const velocity = useMemo(() => new Vector3(
         uVel * partialU.x + vVel * partialV.x,
         uVel * partialU.y + vVel * partialV.y,
@@ -199,6 +201,18 @@ export function ThreeScene({
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
 
     const orbitControlsRef = useRef(null)
+
+    const car = useGLTF("/vrom.glb")
+    const carRot = useMemo(() => {
+        const q1 = new Quaternion()
+        q1.setFromUnitVectors(new Vector3(0, 0, 1), velocityNormalized)
+
+        const q2 = new Quaternion()
+        // FIXME: inverted normals
+        q2.setFromUnitVectors(new Vector3(0, -1, 0), normal)
+
+        return new Euler().setFromQuaternion(q1.multiply(q2))
+    }, [velocityNormalized, normal])
 
     useFrame(({camera}) => {
         const orbitControlsCurrent = orbitControlsRef.current as (OrbitControlsType | null)
@@ -242,7 +256,7 @@ export function ThreeScene({
                 color={surfaceColor}            
                 direction={velocityNormalized.clone().multiplyScalar(-1)}
                 velocity={velocity.length()}
-                normal={partialU.clone().cross(partialV).normalize()}
+                normal={normal}
                 density={10}
                 nParticles={500}
                 playing={playing}
@@ -280,9 +294,7 @@ export function ThreeScene({
                 <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
             }
 
-            <Sphere args={[pointSize, 20, 20]} position={startPos}>
-                <meshToonMaterial color={pointColor} />
-            </Sphere>
+            <primitive object={car.scene} scale={pointSize} position={startPos} rotation={carRot} />
 
             <line>
                 <bufferGeometry ref={lineRef} />

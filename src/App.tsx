@@ -109,7 +109,7 @@ export default function App() {
     const [planeOpacity, planeOpacityNumber, setPlaneOpacity] = useStringNumber(0.4)
 
     const [pointColor, setPointColor] = useState("#00ff00")
-    const [pointSize, pointSizeNumber, setPointSize] = useStringNumber(0.15)
+    const [pointSize, pointSizeNumber, setPointSize] = useStringNumber(0.1)
 
     const [pathColor, setPathColor] = useState("#000000")
 
