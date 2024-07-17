@@ -1,11 +1,13 @@
 import { OrbitControls, Plane, useGLTF } from "@react-three/drei"
 import { useFrame } from "@react-three/fiber"
 import { MutableRefObject, useMemo, useRef, useEffect, } from "react"
-import { Vector3, BufferGeometry, DoubleSide, Color, ShaderMaterial, Quaternion, Euler } from "three"
+import { Vector3, DoubleSide, Color, ShaderMaterial, Quaternion, Euler } from "three"
 import { OrbitControls as OrbitControlsType, ParametricGeometry } from "three/examples/jsm/Addons.js"
 import { ParametricSurfaceFn } from "../utils/functions"
 import { uBase, vBase } from "../utils/math"
 import { Dust } from "./Dust"
+import carPath from "/car.glb?url"
+import Trails from "./Trails"
 
 const dirLightPos = new Vector3(20, 30, 20)
 
@@ -135,7 +137,6 @@ export function ThreeScene({
     planeOpacity,
     // pointColor,
     pointSize,
-    pathColor,
     velocityColor,
     uBaseColor,
     vBaseColor,
@@ -163,7 +164,6 @@ export function ThreeScene({
     planeOpacity: number
     pointColor: string
     pointSize: number
-    pathColor: string
     velocityColor: string
     uBaseColor: string
     vBaseColor: string
@@ -176,12 +176,7 @@ export function ThreeScene({
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
-    const lineRef = useRef<BufferGeometry>(null)
-    useEffect(() => {
-        lineRef.current!.setFromPoints(curvePoints)
-    }, [curvePoints])
-
-    // bases at the starting point
+    // bases at the point
     const partialU = useMemo(() => uBase(parametricSurface, startU, startV), [parametricSurface, startU, startV])
     const partialUMagnitude = useMemo(() => partialU.length(), [partialU])
     const partialUNormalized = useMemo(() => (new Vector3()).copy(partialU).normalize(), [partialU])
@@ -190,28 +185,31 @@ export function ThreeScene({
     const partialVMagnitude = useMemo(() => partialV.length(), [partialV])
     const partialVNormalized = useMemo(() => (new Vector3()).copy(partialV).normalize(), [partialV])
 
-    const normal = useMemo(() => partialU.clone().cross(partialV).normalize(), [partialU, partialV])
-
     const velocity = useMemo(() => new Vector3(
         uVel * partialU.x + vVel * partialV.x,
         uVel * partialU.y + vVel * partialV.y,
         uVel * partialU.z + vVel * partialV.z,
-    ), [startU, startV, uVel, vVel, partialU, partialV])
+    ), [uVel, vVel, partialU, partialV])
     const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
 
+    const normal = useMemo(() => partialV.clone().cross(partialU).normalize(), [partialU, partialV])
+    const bitangent = useMemo(() => velocityNormalized.clone().cross(normal).normalize(), [velocityNormalized, normal])
+
     const orbitControlsRef = useRef(null)
 
-    const car = useGLTF("/vrom.glb")
+    const car = useGLTF(carPath)
     const carRot = useMemo(() => {
         const q1 = new Quaternion()
         q1.setFromUnitVectors(new Vector3(0, 0, 1), velocityNormalized)
 
+        const up = new Vector3(0, 1, 0).applyQuaternion(q1)
+        console.log(up)
         const q2 = new Quaternion()
-        // FIXME: inverted normals
-        q2.setFromUnitVectors(new Vector3(0, -1, 0), normal)
+        q2.setFromUnitVectors(up, normal)
 
-        return new Euler().setFromQuaternion(q1.multiply(q2))
+        const euler = new Euler().setFromQuaternion(q2.multiply(q1))
+        return euler
     }, [velocityNormalized, normal])
 
     useFrame(({camera}) => {
@@ -243,6 +241,9 @@ export function ThreeScene({
         current.uniforms.uTextureColor.value.set(surfaceColor)
     }, [dirLightColor, ambientLightColor, surfaceColor])
 
+    const halfPerpSeparation = useMemo(() => bitangent.clone().multiplyScalar(1.8 * pointSize), [bitangent, pointSize])
+    const directionOffset = useMemo(() => velocityNormalized.clone().multiplyScalar(-2.7 * pointSize), [velocityNormalized, pointSize])
+
     return (
         <>
             <OrbitControls ref={orbitControlsRef} />
@@ -252,7 +253,7 @@ export function ThreeScene({
             <directionalLight position={dirLightPos} color={dirLightColor} />
 
             <Dust
-                originPos={startPos}
+                originPos={startPos.clone().add(directionOffset)}
                 color={surfaceColor}            
                 direction={velocityNormalized.clone().multiplyScalar(-1)}
                 velocity={velocity.length()}
@@ -260,6 +261,8 @@ export function ThreeScene({
                 density={10}
                 nParticles={500}
                 playing={playing}
+                particleSize={pointSize * 0.5}
+                deviation={pointSize}
             />
 
             <Plane renderOrder={1} args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -294,12 +297,14 @@ export function ThreeScene({
                 <arrowHelper args={[velocityNormalized, startPos, velocityMagnitude, velocityColor, 0.3, 0.15]}/>
             }
 
-            <primitive object={car.scene} scale={pointSize} position={startPos} rotation={carRot} />
+            <primitive object={car.scene} scale={pointSize} position={startPos} rotation={carRot} up={normal}/>
 
-            <line>
-                <bufferGeometry ref={lineRef} />
-                <lineBasicMaterial color={pathColor} side={DoubleSide} />
-            </line>
+            {/* FIXME: use tangent 2-space vectors for the separation instead to prevent clipping? */}
+            <Trails
+                curvePoints={curvePoints}
+                halfPerpSeparation={halfPerpSeparation}
+                width={400 * pointSize}
+            />
         </>
     )
 }

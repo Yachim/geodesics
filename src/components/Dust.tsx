@@ -15,6 +15,8 @@ export function Dust({
     density,
     nParticles,
     playing,
+    particleSize,
+    deviation,
 }: {
     originPos: Vector3
     color: string
@@ -24,6 +26,8 @@ export function Dust({
     density: number
     nParticles: number
     playing: boolean
+    particleSize: number
+    deviation: number
 }) {
     const pointsRef = useRef<PointsType>(null)
 
@@ -49,14 +53,12 @@ export function Dust({
 
             let newPos = pos.clone()
                 .addScaledVector(direction, velocity * delta)
-                .addScaledVector(bitangent, (Math.random() - 0.5) * 0.1)
-                .addScaledVector(normal, (Math.random() - 0.5) * 0.1)
+                .addScaledVector(bitangent, (Math.random() - 0.5) * deviation)
+                .addScaledVector(normal, (Math.random() - 0.5) * deviation)
 
             positions[i * 3 + 0] = newPos.x
             positions[i * 3 + 1] = newPos.y
             positions[i * 3 + 2] = newPos.z
-
-            // opacity = 1 - i / nParticles
         }
 
         positionsRef.current = new Float32Array([
@@ -72,10 +74,9 @@ export function Dust({
         <Points
             position={originPos}
             ref={pointsRef}
-            sizes={new Float32Array(Array(nParticles).fill(0.05))}
             positions={new Float32Array(Array(nParticles * 3).fill(NaN))}
         >
-            <pointsMaterial color={color} size={0.05} />
+            <pointsMaterial color={color} size={particleSize} />
         </Points>
     )
 }

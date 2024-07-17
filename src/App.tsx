@@ -111,8 +111,6 @@ export default function App() {
     const [pointColor, setPointColor] = useState("#00ff00")
     const [pointSize, pointSizeNumber, setPointSize] = useStringNumber(0.1)
 
-    const [pathColor, setPathColor] = useState("#000000")
-
     const [uBaseColor, setUBaseColor] = useState("#ff0000")
     const [vBaseColor, setVBaseColor] = useState("#0000ff")
     const [velocityColor, setVelocityColor] = useState("#00ff00")
@@ -255,7 +253,6 @@ export default function App() {
                             planeOpacity={planeOpacityNumber}
                             pointColor={pointColor}
                             pointSize={pointSizeNumber}
-                            pathColor={pathColor}
                             velocityColor={velocityColor}
                             showVelocity={showVelocity}
                             uBaseColor={uBaseColor}
@@ -286,7 +283,6 @@ export default function App() {
                     vVel={vVel}
                     velocityColor={velocityColor}
                     velocityVisible={showVelocity}
-                    pathColor={pathColor}
                     pointColor={pointColor}
                     curvePoints={curvePoints}
                 />}
@@ -363,8 +359,6 @@ export default function App() {
 
                         <label className="flex items-center gap-2">point color: <input value={pointColor} onChange={e => setPointColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">point size: <input value={pointSize} onChange={e => setPointSize(e.target.value)} type="number" /></label>
-
-                        <label className="flex items-center gap-2">path color: <input value={pathColor} onChange={e => setPathColor(e.target.value)} type="color" /></label>
 
                         <label className="flex items-center gap-2">velocity color: <input value={velocityColor} onChange={e => setVelocityColor(e.target.value)} type="color" /></label>
                         <label className="flex items-center gap-2">show velocity: <input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" /></label>
