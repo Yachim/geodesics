@@ -39,6 +39,7 @@ export function ThreeScene({
     targetRef,
     camPosRef,
     playing,
+    side,
 }: {
     parametricSurface: ParametricSurfaceFn
     startU: number
@@ -58,6 +59,7 @@ export function ThreeScene({
     targetRef: MutableRefObject<Vector3>
     camPosRef: MutableRefObject<Vector3>
     playing: boolean
+    side: number // -1 or 1
 }) {
     const startPos = useMemo(() => parametricSurface(startU, startV), [startU, startV, parametricSurface])
 
@@ -78,7 +80,7 @@ export function ThreeScene({
     const velocityMagnitude = useMemo(() => velocity.length(), [velocity])
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
 
-    const normal = useMemo(() => partialV.clone().cross(partialU).normalize(), [partialU, partialV])
+    const normal = useMemo(() => partialV.clone().cross(partialU).multiplyScalar(side).normalize(), [partialU, partialV, side])
     const bitangent = useMemo(() => velocityNormalized.clone().cross(normal).normalize(), [velocityNormalized, normal])
 
     const orbitControlsRef = useRef(null)

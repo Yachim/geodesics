@@ -104,6 +104,7 @@ export default function App() {
     const [showVelocity, setShowVelocity] = useState(true)
     const [showBases, setShowBases] = useState(true)
 
+    const [side, setSide] = useState(1)
     const [startU, startUNumber, setStartU] = useStringNumber(Math.PI / 4)
     const [startV, startVNumber, setStartV] = useStringNumber(0)
     const [u, setU] = useState(startUNumber)
@@ -240,6 +241,7 @@ export default function App() {
                             camPosRef={camPosRef}
                             targetRef={targetRef}
                             playing={state === "playing"}
+                            side={side}
                         />
                     </Canvas>
                     <div className="absolute left-0 bottom-0 w-[150px] h-[150px]">
@@ -283,6 +285,7 @@ export default function App() {
                         <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="number" /></label>
                         <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></label>
                         <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" /></label>
+                        <button onClick={() => setSide(prev => prev * -1)}>flip side</button>
                     </div>
 
                     <p className="p-1 font-bold text-center">Presets</p>
