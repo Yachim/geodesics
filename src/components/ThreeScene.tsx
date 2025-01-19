@@ -55,7 +55,7 @@ export function ThreeScene({
     showVelocity: boolean
     showBases: boolean
     showParticles: boolean
-    curvePoints: Vector3[]
+    curvePoints: [number, number][]
     targetRef: MutableRefObject<Vector3>
     camPosRef: MutableRefObject<Vector3>
     playing: boolean
@@ -81,7 +81,6 @@ export function ThreeScene({
     const velocityNormalized = useMemo(() => (new Vector3()).copy(velocity).normalize(), [velocity])
 
     const normal = useMemo(() => partialV.clone().cross(partialU).multiplyScalar(side).normalize(), [partialU, partialV, side])
-    const bitangent = useMemo(() => velocityNormalized.clone().cross(normal).normalize(), [velocityNormalized, normal])
 
     const orbitControlsRef = useRef(null)
 
@@ -91,7 +90,6 @@ export function ThreeScene({
         q1.setFromUnitVectors(new Vector3(0, 0, 1), velocityNormalized)
 
         const up = new Vector3(0, 1, 0).applyQuaternion(q1)
-        console.log(up)
         const q2 = new Quaternion()
         q2.setFromUnitVectors(up, normal)
 
@@ -108,7 +106,6 @@ export function ThreeScene({
         camPosRef.current = camera.position
     })
 
-    const halfPerpSeparation = useMemo(() => bitangent.clone().multiplyScalar(1.8 * pointSize), [bitangent, pointSize])
     const directionOffset = useMemo(() => velocityNormalized.clone().multiplyScalar(-2.7 * pointSize), [velocityNormalized, pointSize])
 
     return (
@@ -165,10 +162,11 @@ export function ThreeScene({
 
             <primitive object={car.scene} scale={pointSize} position={startPos} rotation={carRot} up={normal}/>
 
-            {/* FIXME: use tangent 2-space vectors for the separation instead to prevent clipping? */}
             <Trails
-                curvePoints={curvePoints}
-                halfPerpSeparation={halfPerpSeparation}
+                parametricSurface={parametricSurface}
+                side={side}
+                points={curvePoints}
+                dist={4.3 * pointSize}
                 width={400 * pointSize}
             />
         </>

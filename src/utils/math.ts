@@ -48,6 +48,11 @@ export function vBase(surface: ParametricSurfaceFn, u: number, v: number): Vecto
     return diffVec3WrtV(surface, u, v)
 }
 
+// side: -1 or 1
+export function getNormal(surface: ParametricSurfaceFn, u: number, v: number, side: number): Vector3 {
+    return vBase(surface, u, v).clone().cross(uBase(surface, u, v)).multiplyScalar(side).normalize()
+}
+
 // g[i, j] = g[j, i]
 function metric(surface: ParametricSurfaceFn, u: number, v: number): Matrix2 {
     // bases

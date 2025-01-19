@@ -237,7 +237,7 @@ export default function App() {
                             showVelocity={showVelocity}
                             showBases={showBases}
                             showParticles={showParticles}
-                            curvePoints={curvePoints.map(([u, v]) => parametricSurface(u, v))}
+                            curvePoints={curvePoints}
                             camPosRef={camPosRef}
                             targetRef={targetRef}
                             playing={state === "playing"}
