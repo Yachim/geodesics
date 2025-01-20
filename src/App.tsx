@@ -7,6 +7,12 @@ import { geodesicStep, Solver } from "./utils/math"
 import { capitalize } from "./utils/capitalize"
 import { CustomJXGBoard } from "./components/JXGBoard"
 import { ThreeScene } from "./components/ThreeScene"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faX } from "@fortawesome/free-solid-svg-icons"
+import { MathJax } from "better-react-mathjax"
+
+const firstOpen = (localStorage.getItem("firstOpen") ?? "true") == "true"
+localStorage.setItem("firstOpen", "false")
 
 function AxesScene({
     camPosRef,
@@ -216,9 +222,84 @@ export default function App() {
     const camPosRef = useRef(new Vector3())
     const targetRef = useRef(new Vector3())
 
+    const [helpShown, setHelpShown] = useState(firstOpen)
+
     return (
         <>
-            <button className="absolute left-2 top-2 px-2 z-10" onClick={() => setView(prev => prev === "intrinsic" ? "extrinsic" : "intrinsic")}>Switch to {view === "intrinsic" ? "extrinsic" : "intrinsic"} view</button>
+            <div className="flex absolute top-2 left-2 z-10 gap-2">
+                <button className="px-2" onClick={() => setView(prev => prev === "intrinsic" ? "extrinsic" : "intrinsic")}>Switch to {view === "intrinsic" ? "extrinsic" : "intrinsic"} view</button>
+                <button className="px-2" onClick={() => setHelpShown(true)}>?</button>
+            </div>
+            {helpShown &&
+                <div className="absolute w-full h-full bg-black bg-opacity-75 z-20 flex justify-center items-center">
+                    <MathJax className="h-[75%] overflow-y-auto"><div className="bg-bg p-4 flex flex-col gap-2 max-w-[70ch]">
+                        <span className="flex justify-between">
+                            <h1>Geodesics Simulation</h1>
+                            <button className="border-0 px-1" onClick={() => setHelpShown(false)}><FontAwesomeIcon icon={faX} /></button>
+                        </span>
+                        <p>This app computes the geodesic from the given initial conditions on a parametric surface.</p>
+                        <p>
+                            The surface is given by the Cartesian coordinates {String.raw`\(\vb*{r} = (x, y, z)\)`} dependent on the parameters {String.raw`\(u, v\)`} which are used as the coordinates.
+                        </p>
+                        <p>
+                            The trig functions {String.raw`\(\sin, \cos, \tan\)`}, their hyperbolic counter parts and their inverses are available. 
+                            Use {String.raw`^`} or ** to raise to a power and sqrt for square root.
+                            Parameters and variables are prefixed by the percent symbol (e.g. %u).
+                            Only one letter variables are allowed. %pi and %e are reserved.
+                        </p>
+
+                        <h2>Tangent Basis & Metric Tensor</h2>
+                        <p>
+                            Given the parametric equation for a surface, we can compute the tangent basis vectors by taking the partial derivatives of the position vector:
+                            {String.raw`\begin{align*}
+                                \vb*{e_u} &= \pdv{\vb*{r}}{u}, \\
+                                \vb*{e_v} &= \pdv{\vb*{r}}{v}.
+                            \end{align*}`}
+                        </p>
+                        <p>
+                            The metric tensor is the dot product of the tangent basis vectors:
+                            {String.raw`\[g_{ij} = \vb*{e_i} \vdot \vb*{e_j},\]`}
+                            together with the inverse metric {String.raw`g^{ij}`} satisfying:
+                            {String.raw`\[g_{ij} g^{jk} = \delta_i{}^k,\]`}
+                            where the Einstein summation convention is used.
+                        </p>
+
+                        <h2>Christoffel Symbols & Geodesics</h2>
+                        <p>
+                            The Christoffel symbols of the second kind are given by the following combination of partial derivatives of the metric tensor:
+                            {String.raw`\[
+                                \Gamma^i{}_{kl} = \frac{1}{2} g^{im} \pqty{g_{mk,l} + g_{ml,k} - g_{kl,m}},
+                            \]`}
+                            where comma denotes partial derivative with respect to a coordinate.
+                        </p>
+                        <p>
+                            The shortest path between two points parametrized by {String.raw`\(\lambda\)`} satisfies the geodesic equation:
+                            {String.raw`\[
+                                \dv[2]{x^i}{\lambda} + \Gamma^i{}_{jk} \dv{x^j}{\lambda} \dv{x^k}{\lambda} = 0.
+                            \]`}
+                        </p>
+
+                        <h2>Solution</h2>
+                        <p>
+                            The Christoffel symbols are computed at every point of the path.
+                            For partial derivatives, a finite difference is used for approximation:
+                            {String.raw`\[
+                                f'(x) \approx \frac{f(x + h) - f(x)}{h}.
+                            \]`}
+                        </p>
+                        <p>
+                            The geodesic equation is a system of two ODEs - one for each coordinate.
+                            We will use the Euler method or RK4 for numerical solution, depending on the choice of the user.
+                        </p>
+
+                        <h2>Controls</h2>
+                        <p>
+                            Use the left mouse button to rotate the camera and the right mouse button to pan around.
+                            Use the scroll wheel to zoom.
+                        </p>
+                    </div></MathJax>
+                </div>
+            }
             <div className="flex w-full h-full">
                 {view === "extrinsic" ? <>
                     <Canvas camera={{position: [0, 10, 10]}}>

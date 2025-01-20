@@ -7,6 +7,18 @@
         @apply w-full h-full overflow-hidden;
     }
 
+    h1, h2 {
+        @apply font-bold;
+    }
+
+    h1 {
+        @apply text-xl;
+    }
+
+    h2 {
+        @apply text-lg;
+    }
+
     :root {
         @apply text-text bg-bg;
     }

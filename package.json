@@ -12,9 +12,13 @@
     "deploy": "gh-pages -d dist -t"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@react-three/drei": "^9.108.3",
     "@react-three/fiber": "^8.16.8",
     "@types/three": "^0.166.0",
+    "better-react-mathjax": "^2.0.4-beta1",
     "gh-pages": "^6.1.1",
     "jsxgraph": "^1.9.2",
     "react": "^18.3.1",
