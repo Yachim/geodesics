@@ -20,10 +20,10 @@
     }
 
     :root {
-        @apply text-text bg-bg;
+        @apply text-text bg-bg box-content;
     }
 
     input, button, select {
-        @apply border-text border-2 text-text bg-bg;
+        @apply border-text border-2 text-text bg-bg px-1;
     }
 }

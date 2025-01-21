@@ -259,7 +259,7 @@ export default function App() {
                         <p>
                             The metric tensor is the dot product of the tangent basis vectors:
                             {String.raw`\[g_{ij} = \vb*{e_i} \vdot \vb*{e_j},\]`}
-                            together with the inverse metric {String.raw`g^{ij}`} satisfying:
+                            together with the inverse metric {String.raw`\(g^{ij}\)`} satisfying:
                             {String.raw`\[g_{ij} g^{jk} = \delta_i{}^k,\]`}
                             where the Einstein summation convention is used.
                         </p>
@@ -346,28 +346,31 @@ export default function App() {
                     curvePoints={curvePoints}
                 />}
 
-                <div className="flex flex-col bg-gray-300 border-2 border-text z-10 overflow-y-auto max-h-full overflow-x-hidden flex-shrink-0">
+                <div className="flex flex-col bg-gray-300 border-2 border-text z-10 overflow-y-auto max-h-full overflow-x-hidden flex-shrink-0 gap-2 p-2">
                     <p className="p-1 font-bold text-center">Surface</p>
-                    <div className="flex flex-col gap-2 p-2">
-                        <label className="flex items-center gap-2">x(u, v) = <input value={xFn} onChange={e => setXFn(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">y(u, v) = <input value={yFn} onChange={e => setYFn(e.target.value)} type="text" /></label>
-                        <label className="flex items-center gap-2">z(u, v) = <input value={zFn} onChange={e => setZFn(e.target.value)} type="text" /></label>
+                        <div className="grid gap-2 [grid-template-columns:auto_1fr]">
+                            <label>x(u, v) = </label><input value={xFn} onChange={e => setXFn(e.target.value)} type="text" />
+                            <label>y(u, v) = </label><input value={yFn} onChange={e => setYFn(e.target.value)} type="text" />
+                            <label>z(u, v) = </label><input value={zFn} onChange={e => setZFn(e.target.value)} type="text" />
+                        </div>
 
-                        {Object.entries(parameters).map(([k, v], i) => 
-                            <label key={`param-${i}`} className="flex items-center gap-2">
-                                {k}: <input value={v} onChange={e => setParameters(prev => ({
-                                    ...prev,
-                                    [k]: +e.target.value,
-                                }))} type="number" />
-                            </label>
-                        )}
+                        <div className="grid gap-2 [grid-template-columns:auto_auto] justify-start">
+                        {Object.entries(parameters).map(([k, v], i) => (<>
+                            <label key={`param-${i}`}>{k}: </label>
+                            <input value={v} onChange={e => setParameters(prev => ({
+                                ...prev,
+                                [k]: +e.target.value,
+                            }))} type="number" />
+                        </>))}
+                        </div>
 
-                        <label className="flex items-center gap-2">u minimum: <input value={minU} onChange={e => setMinU(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">u maximum: <input value={maxU} onChange={e => setMaxU(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">v minimum: <input value={minV} onChange={e => setMinV(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">v maximum: <input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" /></label>
+                        <div className="grid gap-2 [grid-template-columns:auto_1fr]">
+                            <label>u minimum: </label><input value={minU} onChange={e => setMinU(e.target.value)} type="number" />
+                            <label>u maximum: </label><input value={maxU} onChange={e => setMaxU(e.target.value)} type="number" />
+                            <label>v minimum: </label><input value={minV} onChange={e => setMinV(e.target.value)} type="number" />
+                            <label>v maximum: </label><input value={maxV} onChange={e => setMaxV(e.target.value)} type="number" />
+                        </div>
                         <button onClick={() => setSide(prev => prev * -1)}>flip side</button>
-                    </div>
 
                     <p className="p-1 font-bold text-center">Presets</p>
                     <div className="gap-2 grid grid-cols-2 p-2">
@@ -377,16 +380,17 @@ export default function App() {
                     </div>
 
                     <p className="p-1 font-bold text-center">Path</p>
-                    <div className="flex flex-col gap-2 p-2">
-                        <label className="flex items-center gap-2">start u: <input value={startU} onChange={e => setStartU(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">start v: <input value={startV} onChange={e => setStartV(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">velocity u: <input value={startUVel} onChange={e => setStartUVel(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">velocity v: <input value={startVVel} onChange={e => setStartVVel(e.target.value)} type="number" /></label>
-                        <label className="flex items-center gap-2">steps per frame: <input onChange={e => stepsPerFrame.current = +e.target.value} type="number" defaultValue={1} /></label>
-                        <label className="flex items-center gap-2">solver: <select onChange={e => solver.current = e.target.value as Solver}>
-                            <option value="rk">Runge-Kutta</option>
-                            <option value="euler">Euler</option>
-                        </select></label>
+                        <div className="grid gap-2 [grid-template-columns:auto_1fr] items-center">
+                            <label>start u: </label><input value={startU} onChange={e => setStartU(e.target.value)} type="number" />
+                            <label>start v: </label><input value={startV} onChange={e => setStartV(e.target.value)} type="number" />
+                            <label>velocity u: </label><input value={startUVel} onChange={e => setStartUVel(e.target.value)} type="number" />
+                            <label>velocity v: </label><input value={startVVel} onChange={e => setStartVVel(e.target.value)} type="number" />
+                            <label>solver: </label><select onChange={e => solver.current = e.target.value as Solver}>
+                                <option value="rk">Runge-Kutta</option>
+                                <option value="euler">Euler</option>
+                            </select>
+                        </div>
+                        <label className="flex gap-2 whitespace-nowrap">steps per frame: <input className="flex-1 min-w-0" onChange={e => stepsPerFrame.current = +e.target.value} type="number" defaultValue={1} /></label>
                         {state === "playing" || state === "paused" ?
                             <>
                                 <button onClick={() => {
@@ -405,18 +409,18 @@ export default function App() {
                                 stateRef.current = "playing"
                             }}>Play</button>
                         }
-                    </div>
 
                     <p className="p-1 font-bold text-center">Cosmetic</p>
-                    <div className="flex flex-col gap-2 p-2">
-                        <label className="flex items-center gap-2">plane opacity: <input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" /></label>
+                        <div className="grid gap-2 [grid-template-columns:auto_1fr] items-center">
+                            <label className="whitespace-nowrap">plane opacity: </label><input value={planeOpacity} onChange={e => setPlaneOpacity(e.target.value)} type="number" />
+                            <label>point size: </label><input value={pointSize} onChange={e => setPointSize(e.target.value)} type="number" />
+                        </div>
 
-                        <label className="flex items-center gap-2">point size: <input value={pointSize} onChange={e => setPointSize(e.target.value)} type="number" /></label>
-
-                        <label className="flex items-center gap-2">show velocity: <input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" /></label>
-                        <label className="flex items-center gap-2">show bases: <input checked={showBases} onChange={e => setShowBases(e.target.checked)} type="checkbox" /></label>
-                        <label className="flex items-center gap-2">show particles: <input checked={showParticles} onChange={e => setShowParticles(e.target.checked)} type="checkbox" /></label>
-                    </div>
+                        <div className="grid gap-2 [grid-template-columns:auto_1fr] items-center">
+                            <label>show velocity: </label><input checked={showVelocity} onChange={e => setShowVelocity(e.target.checked)} type="checkbox" />
+                            <label>show bases: </label><input checked={showBases} onChange={e => setShowBases(e.target.checked)} type="checkbox" />
+                            <label>show particles: </label><input checked={showParticles} onChange={e => setShowParticles(e.target.checked)} type="checkbox" />
+                        </div>
                 </div>
             </div>
         </>
